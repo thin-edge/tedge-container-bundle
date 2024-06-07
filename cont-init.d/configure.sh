@@ -1,5 +1,5 @@
 #!/command/with-contenv sh
-set -ex
+set -e
 #
 # Convert environment variables config to files
 #
