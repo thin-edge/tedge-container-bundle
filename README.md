@@ -1,6 +1,6 @@
 # tedge-container-bundle
 
-This repo contains an example of how to run thin-edge.io and all of it's components (including mosquitto) in a single container using the lightweight, container friendly init system, [s6-overlay](https://github.com/just-containers/s6-overlay).
+This repo contains a container definition which configures all of the thin-edge.io components (including mosquitto) in a single container using the lightweight, container friendly init system, [s6-overlay](https://github.com/just-containers/s6-overlay).
 
 [s6-overlay](https://github.com/just-containers/s6-overlay) is an init system which is desired to run multiple processes in a single container. It starts and supervises each service. Check out the [s6-overlay documentation](https://github.com/just-containers/s6-overlay) for further details.
 
@@ -90,3 +90,5 @@ CERTPUBLIC=LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUJ4RENDQVdxZ0F3SUJBZ0lVRlFOe
 ## Notes on s6-overlay
 
 * Both the initialization scripts and services have access to the container's environment variables, which makes it much easier to configure the components.
+* Standard Output and Standard Error are redirected to the PID 1 so that the log messages are visible from all services
+* Run services under the container `USER`
