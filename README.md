@@ -21,7 +21,13 @@ The **tedge-container-bundle** provides the following features:
 
 ### Starting the container
 
-You can start the container using the following steps:
+The following tools are required to run the container:
+
+* docker
+* docker compose
+* Optional: [just](https://github.com/casey/just) - used to run project tasks
+
+After the project pre-requisites have been installed, you can start the container using the following steps:
 
 1. Create a `.env` file containing the environment variables (see the [Providing the device certificate by environment variables](./README.md#providing-the-device-certificate-by-environment-variables) for details on how to provide the device certificate)
 
