@@ -37,7 +37,7 @@ After the project pre-requisites have been installed, you can start the containe
     CERTPUBLIC=<base64_encoded_public_cert>
 
     # Which c8y instance you want to connect to
-    TEDGE_C8Y_URL=iot.latest.stage.c8y.io
+    TEDGE_C8Y_URL=example.cumulocity.com
 
     # You can turn specific services on/off via environment variables
     SERVICE_TEDGE_MAPPER_AWS=0
