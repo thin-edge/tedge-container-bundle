@@ -1,0 +1,10 @@
+services:
+  tedge:
+    build:
+      dockerfile: Dockerfile
+      context: .
+    restart: always
+    env_file:
+      - .env
+    tmpfs:
+      - /tmp
