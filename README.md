@@ -65,7 +65,7 @@ After the project pre-requisites have been installed, you can start the containe
 
 The thin-edge.io certificate (both public and private keys) are provided to the container via environment variables.
 
-The following environment variables are used to provide the certificate to the container's startup script `configure.sh` which is called by s6-overlay when the container starts up:
+The following environment variables are used to provide the certificate to the container's startup script `50_configure.sh` which is called by s6-overlay when the container starts up:
 
 * `CERTPRIVATE` - Device certificate private key (base64 encoded)
 * `CERTPUBLIC` - Device certificate public key (base64 encoded)
