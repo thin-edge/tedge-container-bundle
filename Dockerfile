@@ -1,6 +1,6 @@
-ARG TEDGE_TAG=1.2.0
+ARG TEDGE_TAG=1.2.1-134-ge4ff79b
 # thin-edge.io base image name: tedge, tedge-main
-ARG TEDGE_IMAGE=tedge
+ARG TEDGE_IMAGE=tedge-main
 FROM ghcr.io/thin-edge/${TEDGE_IMAGE}:${TEDGE_TAG}
 ARG TARGETPLATFORM
 ARG S6_OVERLAY_VERSION=3.2.0.0
