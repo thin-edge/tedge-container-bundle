@@ -4,16 +4,9 @@ services:
       dockerfile: Dockerfile
       context: .
     restart: always
-    user: "${DOCKER_USER:-tedge:tedge}"
     secrets:
       - source: certificate_private_key
-        mode: 0644
-        uid: "tedge"
-        gid: "tedge"
       - source: certificate_public_key
-        mode: 0644
-        uid: "tedge"
-        gid: "tedge"
     env_file:
       - .env
     tmpfs:

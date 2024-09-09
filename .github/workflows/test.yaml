@@ -81,7 +81,6 @@ jobs:
 
       - name: Start demo
         run: |
-          export DOCKER_USER="1000:101"
           just start -d
 
       - name: Run tests
