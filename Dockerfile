@@ -1,7 +1,9 @@
-ARG VERSION=1.1.1
-FROM ghcr.io/thin-edge/tedge:${VERSION}
-ARG TARGETARCH
-ARG S6_OVERLAY_VERSION=3.1.6.2
+ARG TEDGE_TAG=1.2.0
+# thin-edge.io base image name: tedge, tedge-main
+ARG TEDGE_IMAGE=tedge
+FROM ghcr.io/thin-edge/${TEDGE_IMAGE}:${TEDGE_TAG}
+ARG TARGETPLATFORM
+ARG S6_OVERLAY_VERSION=3.2.0.0
 
 USER root
 
@@ -18,11 +20,12 @@ RUN apk update \
 
 # Install s6-overlay
 # Based on https://github.com/just-containers/s6-overlay#which-architecture-to-use-depending-on-your-targetarch
-RUN case ${TARGETARCH} in \
-        "amd64")  S6_ARCH=x86_64  ;; \
-        "arm64")  S6_ARCH=aarch64  ;; \
-        "arm/v6")  S6_ARCH=armhf  ;; \
-        "arm/v7")  S6_ARCH=arm  ;; \
+RUN case ${TARGETPLATFORM} in \
+        "linux/amd64")  S6_ARCH=x86_64  ;; \
+        "linux/arm64")  S6_ARCH=aarch64  ;; \
+        "linux/arm/v6")  S6_ARCH=armhf  ;; \
+        "linux/arm/v7")  S6_ARCH=arm  ;; \
+        *) echo "Unsupported target platform: TARGETPLATFORM=$TARGETPLATFORM"; exit 1 ;; \
     esac \
     && curl https://github.com/just-containers/s6-overlay/releases/download/v${S6_OVERLAY_VERSION}/s6-overlay-noarch.tar.xz -L -s --output /tmp/s6-overlay-noarch.tar.xz \
     && tar -C / -Jxpf /tmp/s6-overlay-noarch.tar.xz \
@@ -53,18 +56,23 @@ COPY files/tedge/tedge.toml /etc/tedge/
 COPY files/tedge/plugins/*.toml /etc/tedge/plugins/
 
 
-ENV S6_BEHAVIOUR_IF_STAGE2_FAILS=2
-ENV S6_CMD_WAIT_FOR_SERVICES_MAXTIME=30000
+ENV S6_BEHAVIOUR_IF_STAGE2_FAILS 2
+ENV S6_CMD_WAIT_FOR_SERVICES_MAXTIME 30000
 
 
 # Control which mappers are running
 # You can see the list of thin-edge.io services and the related env variable
 # in the service definition under:
 # * https://github.com/thin-edge/tedge-services/tree/main/services/s6-overlay/s6-rc.d
-ENV SERVICE_TEDGE_MAPPER_AWS=0
-ENV SERVICE_TEDGE_MAPPER_AZ=0
-ENV SERVICE_TEDGE_MAPPER_C8Y=1
-ENV SERVICE_TEDGE_MAPPER_COLLECTD=0
+ENV SERVICE_MOSQUITTO 1
+
+ENV SERVICE_TEDGE_MAPPER_AWS 0
+ENV SERVICE_TEDGE_MAPPER_AZ 0
+ENV SERVICE_TEDGE_MAPPER_C8Y 1
+ENV SERVICE_TEDGE_MAPPER_COLLECTD 0
+
+ENV SERVICE_TEDGE_AGENT 1
+ENV SERVICE_C8Y_FIRMWARE_PLUGIN 0
 
 
 # Control thin-edge.io settings via env variables
