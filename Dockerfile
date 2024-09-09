@@ -87,4 +87,6 @@ ENV TEDGE_C8Y_PROXY_CLIENT_HOST=127.0.0.1
 VOLUME [ "/etc/tedge/device-certs" ]
 
 USER "tedge"
-ENTRYPOINT ["/init"]
+# Allow users to re-use the container for one-off commands
+# to ensure the thin-edge.io version remains the same
+CMD [ "/init" ]
