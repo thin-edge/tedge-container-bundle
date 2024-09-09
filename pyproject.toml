@@ -1,0 +1,14 @@
+# See the robocop rules list for more information about the linting rules:
+# https://robocop.readthedocs.io/en/stable/rules_list.html
+[tool.robocop]
+exclude = [
+    # Docs
+    "missing-doc-suite",
+    "missing-doc-test-case",
+    "missing-doc-keyword",
+    "missing-doc-resource-file",
+]
+
+configure = [
+    "line-too-long:line_length:200",
+]
