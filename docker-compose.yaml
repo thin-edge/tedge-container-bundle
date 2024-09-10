@@ -4,24 +4,14 @@ services:
       dockerfile: Dockerfile
       context: .
     restart: always
-    user: "${DOCKER_USER:-tedge:tedge}"
-    secrets:
-      - source: certificate_private_key
-        mode: 0644
-        uid: "tedge"
-        gid: "tedge"
-      - source: certificate_public_key
-        mode: 0644
-        uid: "tedge"
-        gid: "tedge"
     env_file:
       - .env
     tmpfs:
       - /tmp
+    volumes:
+      - device_certs:/etc/tedge/device-certs
 
-secrets:
-  certificate_private_key:
-    file: device-certs/tedge-private-key.pem
-
-  certificate_public_key:
-    file: device-certs/tedge-certificate.pem
+volumes:
+  device_certs:
+    external:
+      name: device-certs

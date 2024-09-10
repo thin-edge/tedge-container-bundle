@@ -69,6 +69,45 @@ After the project pre-requisites have been installed, you can start the containe
     just run-container
     ```
 
+## Manually deploying
+
+### Using docker and a manually created volume
+
+1. Create a docker volume which will be used to store the device certificate
+
+    ```sh
+    docker volume create device-certs
+    ```
+
+2. Initialize the certificate
+
+    ```sh
+    docker run --rm -it \
+        -v "device-certs:/etc/tedge/device-certs" \
+        -e "TEDGE_C8Y_URL=${C8Y_DOMAIN}" \
+        ghcr.io/thin-edge/tedge-main:latest tedge cert create --device-id "<mydeviceid>"
+    ```
+
+3. Upload the certificate
+
+    ```sh
+    docker run --rm -it \
+        -v "device-certs:/etc/tedge/device-certs" \
+        -e "TEDGE_C8Y_URL=$C8Y_DOMAIN" \
+        -e "C8Y_USER=$C8Y_USER" \
+        -e "C8Y_PASSWORD=$C8Y_PASSWORD" \
+        ghcr.io/thin-edge/tedge-main:latest tedge cert upload c8y
+    ```
+
+4. Start the container
+
+    ```sh
+    docker run --rm -it \
+        -v "device-certs:/etc/tedge/device-certs" \
+        -e "TEDGE_C8Y_URL=$C8Y_DOMAIN" \
+        ghcr.io/thin-edge/tedge-container-bundle:latest
+    ```
+
 ## Project structure
 
 |Directory|Description|
