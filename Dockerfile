@@ -39,7 +39,9 @@ RUN rm -f /etc/tedge/system.toml
 RUN wget -O - https://thin-edge.io/install-services.sh | sh -s -- s6_overlay \
     && apk add --no-cache \
         c8y-command-plugin \
-        tedge-apk-plugin
+        tedge-apk-plugin \
+        docker-cli \
+        tedge-container-plugin
 
 # Set permissions of all files under /etc/tedge
 # TODO: Can thin-edge.io set permissions during installation?
