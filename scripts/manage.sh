@@ -35,7 +35,7 @@ create_cert() {
 upload() {
     docker run $DOCKER_OPTIONS \
         -v "$VOLUME:/etc/tedge/device-certs" \
-        -e "TEDGE_C8Y_URL=$C8Y_DOMAIN" \
+        -e "TEDGE_C8Y_URL=${TEDGE_C8Y_URL:-$C8Y_DOMAIN}" \
         -e "C8Y_USER=$C8Y_USER" \
         -e "C8Y_PASSWORD=$C8Y_PASSWORD" \
         ghcr.io/thin-edge/tedge:latest tedge cert upload c8y
