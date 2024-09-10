@@ -17,42 +17,28 @@ if [ -n "$CI" ]; then
     set -x
 fi
 
-DEVICE_CERTS="$(pwd)/device-certs"
-mkdir -p "$DEVICE_CERTS"
+VOLUME=${VOLUME:-device-certs}
 
-show_common_name() {
-    docker run $DOCKER_OPTIONS -v "$DEVICE_CERTS:/etc/tedge/device-certs" ghcr.io/thin-edge/tedge:latest tedge config get device.id | sed 's/\r$//g'
+show() {
+    value=$(
+        docker run -t=false -i=false -v "$VOLUME:/etc/tedge/device-certs" ghcr.io/thin-edge/tedge:latest tedge config get device.id     
+    )
+    echo -n "$value"
 }
 
 create_cert() {
-    COMMON_NAME="$1"
-    if command -V tedge >/dev/null 2>&1; then
-        tedge cert create --config-dir "$(pwd)" --device-id "$COMMON_NAME"
-    else
-        docker run $DOCKER_OPTIONS --user "$UID:$GID" -v "$DEVICE_CERTS:/etc/tedge/device-certs" ghcr.io/thin-edge/tedge:latest tedge cert create --device-id "$COMMON_NAME"
-    fi
-    chmod 444 "$DEVICE_CERTS"/*
+    NAME="$1"
+    docker volume create "$VOLUME"
+    docker run $DOCKER_OPTIONS -v "$VOLUME:/etc/tedge/device-certs" ghcr.io/thin-edge/tedge:latest tedge cert create --device-id "$NAME"
 }
 
 upload() {
-    COMMON_NAME=$(show_common_name)
-    if [ -z "$COMMON_NAME" ]; then
-        echo "Could not detect certificate common name" >&2
-        exit 1
-    fi
-    if [ ! -f "$DEVICE_CERTS/tedge-certificate.pem" ]; then
-        echo "device certificate does not exist: $DEVICE_CERTS/tedge-certificate.pem" >&2
-        exit 1
-    fi
-
-    c8y devicemanagement certificates create \
-        -n \
-        --name "$COMMON_NAME" \
-        --file "$DEVICE_CERTS/tedge-certificate.pem" \
-        --autoRegistrationEnabled \
-        --status ENABLED \
-        --silentStatusCodes 409 \
-        --silentExit
+    docker run $DOCKER_OPTIONS \
+        -v "$VOLUME:/etc/tedge/device-certs" \
+        -e "TEDGE_C8Y_URL=$C8Y_DOMAIN" \
+        -e "C8Y_USER=$C8Y_USER" \
+        -e "C8Y_PASSWORD=$C8Y_PASSWORD" \
+        ghcr.io/thin-edge/tedge:latest tedge cert upload c8y
 }
 
 main() {
@@ -65,18 +51,17 @@ main() {
                 echo "Missing required argument or DEVICE_ID env variable. COMMON_NAME" >&2
                 exit 1
             fi
-            mkdir -p "$DEVICE_CERTS"
             create_cert "$DEVICE_ID"
             ;;
         delete)
-            echo "Removing device certificates: $DEVICE_CERTS"
-            rm -rf "$DEVICE_CERTS"
+            echo "Removing device certificates: $VOLUME"
+            docker volume rm "$VOLUME"
             ;;
         upload)
             upload
             ;;
         show)
-            show_common_name
+            show
             ;;
     esac
 }
