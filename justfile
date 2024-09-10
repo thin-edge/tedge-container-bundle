@@ -8,7 +8,7 @@ ENV_FILE := ".env"
 
 REGISTRY := "ghcr.io"
 REPO_OWNER := "thin-edge"
-DEFAULT_OUTPUT_TYPE := "image,dest=" + IMAGE + ".tar"
+DEFAULT_OUTPUT_TYPE := "registry,dest=" + IMAGE + ".tar"
 
 RELEASE_VERSION := env_var_or_default("RELEASE_VERSION", `date +'%Y%m%d.%H%M'`)
 
@@ -39,7 +39,7 @@ build-setup:
 # Use oci-mediatypes=false to improve compatibility with older docker verions, e.g. <= 19.0.x
 # See https://github.com/docker/buildx/issues/1964#issuecomment-1644634461
 build OUTPUT_TYPE=DEFAULT_OUTPUT_TYPE VERSION='latest': build-setup
-    docker buildx build --platform linux/arm/v6,linux/arm/v7,linux/amd64,linux/arm64 --build-arg "TEDGE_IMAGE={{TEDGE_IMAGE}}" --build-arg "TEDGE_TAG={{TEDGE_TAG}}" -t "{{REGISTRY}}/{{REPO_OWNER}}/{{IMAGE}}:{{VERSION}}" -t "{{REGISTRY}}/{{REPO_OWNER}}/{{IMAGE}}:latest" -f Dockerfile --output=type="{{OUTPUT_TYPE}}",oci-mediatypes=false .
+    docker buildx build --platform linux/arm/v6,linux/arm/v7,linux/amd64,linux/arm64 --build-arg "TEDGE_IMAGE={{TEDGE_IMAGE}}" --build-arg "TEDGE_TAG={{TEDGE_TAG}}" -t "{{REGISTRY}}/{{REPO_OWNER}}/{{IMAGE}}:{{VERSION}}" -t "{{REGISTRY}}/{{REPO_OWNER}}/{{IMAGE}}:latest" -f Dockerfile --output=type="{{OUTPUT_TYPE}}",oci-mediatypes=false --provenance=false .
 
 # Install python virtual environment
 venv:
