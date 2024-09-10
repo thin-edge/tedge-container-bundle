@@ -1,8 +1,8 @@
 # tedge-container-bundle
 
-This repo contains a container definition which configures all of the thin-edge.io components (including mosquitto) in a single container using the lightweight, container friendly init system, [s6-overlay](https://github.com/just-containers/s6-overlay).
+This project contains a container definition which configures all of the thin-edge.io components (including mosquitto) in a single container using the lightweight, container friendly init system, [s6-overlay](https://github.com/just-containers/s6-overlay).
 
-[s6-overlay](https://github.com/just-containers/s6-overlay) is an init system which is desired to run multiple processes in a single container. It starts and supervises each service. Check out the [s6-overlay documentation](https://github.com/just-containers/s6-overlay) for further details.
+[s6-overlay](https://github.com/just-containers/s6-overlay) is an init system which is designed to run multiple processes in a single container. It starts and supervises each service, in addition to supporting startup/initialization scripts. For more details about s6-overlay, check out the [s6-overlay documentation](https://github.com/just-containers/s6-overlay).
 
 This repository might be helpful if you are looking for a simple container deployment of thin-edge.io and don't want to spawn multiple containers, and your device does not have access to a Kubernetes instance like ([k3s](https://k3s.io/)).
 
@@ -19,7 +19,59 @@ The **tedge-container-bundle** provides the following features:
 
 ## Getting Started
 
-### Starting the container
+### Pre-requisites
+
+The following are required in order to deploy the container
+
+* docker
+* docker compose
+
+### Step 1: Create a device certificate inside a named volume
+
+Before you can start the containers, you need to create a device certificate inside a named volume.
+
+1. Create a docker volume which will be used to store the device certificate
+
+    ```sh
+    docker volume create device-certs
+    ```
+
+2. Create a new device certificate
+
+    ```sh
+    docker run --rm -it \
+        -v "device-certs:/etc/tedge/device-certs" \
+        -e "TEDGE_C8Y_URL=${C8Y_DOMAIN}" \
+        ghcr.io/thin-edge/tedge-main:latest tedge cert create --device-id "<mydeviceid>"
+    ```
+
+3. Upload the device certificate to Cumulocity IoT
+
+    ```sh
+    docker run --rm -it \
+        -v "device-certs:/etc/tedge/device-certs" \
+        -e "TEDGE_C8Y_URL=$C8Y_DOMAIN" \
+        -e "C8Y_USER=$C8Y_USER" \
+        -e "C8Y_PASSWORD=$C8Y_PASSWORD" \
+        ghcr.io/thin-edge/tedge-main:latest tedge cert upload c8y
+    ```
+
+### Step 2: Start thin-edge.io
+
+Once the device certificate has been created inside the named volume, the same volume can be used when starting the container.
+
+```sh
+docker run --rm -it \
+    -v "device-certs:/etc/tedge/device-certs" \
+    -e "TEDGE_C8Y_URL=$C8Y_DOMAIN" \
+    ghcr.io/thin-edge/tedge-container-bundle:latest
+```
+
+The `TEDGE_C8Y_URL` env variable is used to set the target Cumulocity IoT so that thin-edge.io knows where to connect to.
+
+### Development
+
+#### Starting the container
 
 The following tools are required to run the container:
 
@@ -63,50 +115,6 @@ After the project pre-requisites have been installed, you can start the containe
     docker compose up --build
     ```
 
-    Alternatively, you can start the container manually using the [justfile](https://github.com/casey/just) tasks (which call `docker run` instead of `docker compose`)
-
-    ```sh
-    just run-container
-    ```
-
-## Manually deploying
-
-### Using docker and a manually created volume
-
-1. Create a docker volume which will be used to store the device certificate
-
-    ```sh
-    docker volume create device-certs
-    ```
-
-2. Initialize the certificate
-
-    ```sh
-    docker run --rm -it \
-        -v "device-certs:/etc/tedge/device-certs" \
-        -e "TEDGE_C8Y_URL=${C8Y_DOMAIN}" \
-        ghcr.io/thin-edge/tedge-main:latest tedge cert create --device-id "<mydeviceid>"
-    ```
-
-3. Upload the certificate
-
-    ```sh
-    docker run --rm -it \
-        -v "device-certs:/etc/tedge/device-certs" \
-        -e "TEDGE_C8Y_URL=$C8Y_DOMAIN" \
-        -e "C8Y_USER=$C8Y_USER" \
-        -e "C8Y_PASSWORD=$C8Y_PASSWORD" \
-        ghcr.io/thin-edge/tedge-main:latest tedge cert upload c8y
-    ```
-
-4. Start the container
-
-    ```sh
-    docker run --rm -it \
-        -v "device-certs:/etc/tedge/device-certs" \
-        -e "TEDGE_C8Y_URL=$C8Y_DOMAIN" \
-        ghcr.io/thin-edge/tedge-container-bundle:latest
-    ```
 
 ## Project structure
 
