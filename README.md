@@ -28,12 +28,13 @@ The following are required in order to deploy the container
 
 ### Step 1: Create a device certificate inside a named volume
 
-Before you can start the containers, you need to create a device certificate inside a named volume.
+Before you can start the containers, you need to create a device certificate inside a named volume, and also to persist the mosquitto data
 
-1. Create a docker volume which will be used to store the device certificate
+1. Create a docker volume which will be used to store the device certificate, and a volume for the mosquitto data
 
     ```sh
     docker volume create device-certs
+    docker volume create mosquitto
     ```
 
 2. Set the Cumulocity IoT variable (to make it easier to copy/paste the remaining instructions)
@@ -64,9 +65,9 @@ Before you can start the containers, you need to create a device certificate ins
 
     ```sh
     docker run --rm -it --dns 8.8.8.8 --network host \
-    -v "device-certs:/etc/tedge/device-certs" \
-    -e "TEDGE_C8Y_URL=${TEDGE_C8Y_URL}" \
-    ghcr.io/thin-edge/tedge-container-bundle:latest tedge cert upload c8y
+        -v "device-certs:/etc/tedge/device-certs" \
+        -e "TEDGE_C8Y_URL=${TEDGE_C8Y_URL}" \
+        ghcr.io/thin-edge/tedge-container-bundle:latest tedge cert upload c8y
     ```
 
     **Tip**
@@ -75,11 +76,11 @@ Before you can start the containers, you need to create a device certificate ins
 
     ```sh
     docker run --rm -it --dns 8.8.8.8 --network host \
-    -v "device-certs:/etc/tedge/device-certs" \
-    -e "TEDGE_C8Y_URL=${TEDGE_C8Y_URL}" \
-    -e "C8Y_USER=$C8Y_USER" \
-    -e "C8Y_PASSWORD=$C8Y_PASSWORD" \
-    ghcr.io/thin-edge/tedge-container-bundle:latest tedge cert upload c8y
+        -v "device-certs:/etc/tedge/device-certs" \
+        -e "TEDGE_C8Y_URL=${TEDGE_C8Y_URL}" \
+        -e "C8Y_USER=$C8Y_USER" \
+        -e "C8Y_PASSWORD=$C8Y_PASSWORD" \
+        ghcr.io/thin-edge/tedge-container-bundle:latest tedge cert upload c8y
     ```
 
 ### Step 2: Start thin-edge.io
@@ -88,7 +89,9 @@ Once the device certificate has been created inside the named volume, the same v
 
 ```sh
 docker run --rm -it --dns 8.8.8.8 --network host \
+    --restart=always \
     -v "device-certs:/etc/tedge/device-certs" \
+    -v "mosquitto:/mosquitto/data" \
     -e "TEDGE_C8Y_URL=$C8Y_DOMAIN" \
     ghcr.io/thin-edge/tedge-container-bundle:latest
 ```
@@ -98,9 +101,11 @@ The `TEDGE_C8Y_URL` env variable is used to set the target Cumulocity IoT so tha
 All of the thin-edge.io settings can be customized via environment variables, which can be useful if you want to change the port numbers like in the following example:
 
 ```sh
-docker run --rm -it --dns 8.8.8.8 --network host \
+docker run --dns 8.8.8.8 --network host \
     -d \
+    --restart=always \
     -v "device-certs:/etc/tedge/device-certs" \
+    -v "mosquitto:/mosquitto/data" \
     -e TEDGE_C8Y_PROXY_BIND_PORT=9001 \
     -e TEDGE_C8Y_PROXY_CLIENT_PORT=9001 \
     -e TEDGE_MQTT_BIND_PORT=1884 \
