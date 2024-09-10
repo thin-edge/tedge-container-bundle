@@ -8,7 +8,7 @@ ENV_FILE := ".env"
 
 REGISTRY := "ghcr.io"
 REPO_OWNER := "thin-edge"
-DEFAULT_OUTPUT_TYPE := "oci,dest=" + IMAGE + ".tar"
+DEFAULT_OUTPUT_TYPE := "image,dest=" + IMAGE + ".tar"
 
 RELEASE_VERSION := env_var_or_default("RELEASE_VERSION", `date +'%Y%m%d.%H%M'`)
 
