@@ -7,7 +7,7 @@ Suite Setup     Set Main Device
 
 
 *** Test Cases ***
-Cloud Connecion is Online
+Cloud Connection is Online
     Cumulocity.Execute Shell Command    tedge connect c8y --test
 
 Service status
