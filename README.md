@@ -88,7 +88,8 @@ Before you can start the containers, you need to create a device certificate ins
 Once the device certificate has been created inside the named volume, the same volume can be used when starting the container.
 
 ```sh
-docker run --rm -it --dns 8.8.8.8 --network host \
+docker run --dns 8.8.8.8 --network host \
+    -d \
     --restart=always \
     -v "device-certs:/etc/tedge/device-certs" \
     -v "mosquitto:/mosquitto/data" \
