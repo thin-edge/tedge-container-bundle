@@ -93,6 +93,7 @@ docker run -d \
     --restart=always \
     -v "device-certs:/etc/tedge/device-certs" \
     -v "mosquitto:/mosquitto/data" \
+    -v /var/run/docker.sock:/var/run/docker.sock:rw \
     -e "TEDGE_C8Y_URL=$C8Y_DOMAIN" \
     ghcr.io/thin-edge/tedge-container-bundle:latest
 ```
@@ -108,6 +109,7 @@ docker run --dns 8.8.8.8 --network host \
     --restart=always \
     -v "device-certs:/etc/tedge/device-certs" \
     -v "mosquitto:/mosquitto/data" \
+    -v /var/run/docker.sock:/var/run/docker.sock:rw \
     -e TEDGE_C8Y_PROXY_BIND_PORT=9001 \
     -e TEDGE_C8Y_PROXY_CLIENT_PORT=9001 \
     -e TEDGE_MQTT_BIND_PORT=1884 \
