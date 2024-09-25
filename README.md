@@ -137,6 +137,9 @@ After the project pre-requisites have been installed, you can start the containe
 1. Create a `.env` file containing the environment variables (see the [Providing the device certificate by environment variables](./README.md#providing-the-device-certificate-by-environment-variables) for details on how to provide the device certificate)
 
     ```sh
+    # device id to use for the certificate
+    DEVICE_ID=demo01
+
     # Which c8y instance you want to connect to
     TEDGE_C8Y_URL=example.cumulocity.com
 
@@ -146,19 +149,13 @@ After the project pre-requisites have been installed, you can start the containe
     SERVICE_TEDGE_MAPPER_C8Y=1
     ```
 
-2. Init the device certificate (stored under `./device-cert)
+2. Init the device certificate (stored under `./device-cert) and upload it to Cumulocity IoT
 
     ```sh
     just init
     ```
 
-3. Upload the device certificate to Cumulocity IoT
-
-    ```sh
-    just upload
-    ```
-
-4. Start the container (using docker compose)
+3. Start the container (using docker compose)
 
     ```sh
     # using justfile task
