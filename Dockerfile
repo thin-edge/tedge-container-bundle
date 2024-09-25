@@ -64,6 +64,9 @@ COPY files/mosquitto/mosquitto.conf /etc/mosquitto/mosquitto.conf
 # Add custom thin-edge.io configuration (e.g. plugin config)
 COPY files/tedge/tedge.toml /etc/tedge/
 COPY files/tedge/plugins/*.toml /etc/tedge/plugins/
+# Self update workflow
+COPY files/tedge/self_update.toml /etc/tedge/operations/
+COPY files/tedge/self_update.sh /usr/bin/
 
 
 ENV S6_BEHAVIOUR_IF_STAGE2_FAILS=2
