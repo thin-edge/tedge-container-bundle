@@ -3,6 +3,10 @@
 set -e
 echo "Current User: $(whoami)"
 
+# Create the agent state folder
+AGENT_STATE=$(tedge config get agent.state.path)
+mkdir -p "$AGENT_STATE"
+
 #
 # Note: Due to permissions problems, copy the secrets from the /run read-only path to /etc/tedge/device-certs/
 #

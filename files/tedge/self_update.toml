@@ -10,23 +10,35 @@ on_success = "executing"
 
 [executing]
 action = "proceed"
-on_success = "update"
+on_success = "needs_update"
 
 [needs_update]
-# TODO: Prevent infinite loop
-script = "self-update.sh needs_update"
+script = "self_update.sh needs_update"
 on_exit.0 = "update"
 on_exit.1 = "successful"
 on_exit._ = "failed"
 
 [update]
-script = "self-update.sh update_background"
-on_exec = "waiting-for-update"
-on_success = "failed"
+script = "self_update.sh update_background"
+on_success = "shutdown_container"
 on_error = "failed"
-# on_kill is expected as it is a sign that the background updater is working
-# and needs_update is idempotent
-on_kill = "needs_update"
+
+[shutdown_container]
+# Note: a restart will trigger a container shutdown
+operation = "restart"
+on_exec = "await_container_startup"
+
+[await_container_startup]
+action = "await-operation-completion"
+on_success = "verify"
+
+[verify]
+# The container should be up to date after
+# if it isn't then something went wrong
+script = "self_update.sh needs_update"
+on_exit.0 = "failed"
+on_exit.1 = "successful"
+on_exit._ = "failed"
 
 [successful]
 action = "cleanup"
