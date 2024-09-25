@@ -52,7 +52,6 @@ jobs:
       - name: create .env file
         run: |
           touch .env
-          just init "$DEVICE_ID"
 
           echo "DEVICE_ID=$DEVICE_ID" >> .env
           echo 'C8Y_BASEURL="${{ secrets.C8Y_BASEURL }}"' >> .env
@@ -64,9 +63,9 @@ jobs:
           echo "TEDGE_C8Y_URL=$C8Y_DOMAIN" >> .env
           cat .env
 
-      - name: Upload certificate
+      - name: Bootstrap device
         run: |
-          just upload
+          just init
 
       - uses: actions/setup-python@v5
         with:

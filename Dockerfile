@@ -16,7 +16,8 @@ RUN apk update \
         bash \
         curl \
         # GNU sed (to provide the unbuffered streaming option used in the log parsing)
-        sed
+        sed \
+        sudo
 
 # Install s6-overlay
 # Based on https://github.com/just-containers/s6-overlay#which-architecture-to-use-depending-on-your-targetarch
@@ -41,13 +42,17 @@ RUN wget -O - https://thin-edge.io/install-services.sh | sh -s -- s6_overlay \
         c8y-command-plugin \
         tedge-apk-plugin \
         docker-cli \
+        # Enable easier management of containers using docker compose
+        # without requiring the cli to be installed on the host (as read-only filesystems)
+        # might not have access to it
+        # Note: Volumes should be configured to persist the docker compose files
+        docker-cli-compose \
         tedge-container-plugin
 
 # Set permissions of all files under /etc/tedge
 # TODO: Can thin-edge.io set permissions during installation?
-RUN chown -R tedge:tedge /etc/tedge
-
-
+RUN chown -R tedge:tedge /etc/tedge \
+    && echo "tedge  ALL = (ALL) NOPASSWD: /usr/bin/tedge, /etc/tedge/sm-plugins/[a-zA-Z0-9]*, /bin/sync, /sbin/init, /usr/bin/docker" >/etc/sudoers.d/tedge
 # Custom init. scripts - e.g. write env variables data to files
 COPY cont-init.d/*  /etc/cont-init.d/
 

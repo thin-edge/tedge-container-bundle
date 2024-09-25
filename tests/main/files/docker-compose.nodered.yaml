@@ -1,0 +1,18 @@
+services:
+  node-red:
+    image: nodered/node-red:latest
+    environment:
+      - NODE_RED_ENABLE_PROJECTS=true
+      - TZ=Europe/Amsterdam
+    ports:
+      - "1880:1880"
+    networks:
+      - node-red-net
+    volumes:
+      - node-red-data:/data
+
+volumes:
+  node-red-data:
+
+networks:
+  node-red-net:
