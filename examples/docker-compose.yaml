@@ -1,0 +1,20 @@
+services:
+  tedge:
+    image: ghcr.io/thin-edge/tedge-container-bundle:latest
+    pull_policy: always
+    restart: always
+    env_file:
+      - .env
+    tmpfs:
+      - /tmp
+    volumes:
+      - device-certs:/etc/tedge/device-certs
+      - mosquitto:/mosquitto/data
+      # Enable docker from docker
+      - /var/run/docker.sock:/var/run/docker.sock:rw
+
+volumes:
+  device-certs:
+    external: true
+  mosquitto:
+    external: true
