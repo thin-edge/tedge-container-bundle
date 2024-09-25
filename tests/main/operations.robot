@@ -28,6 +28,17 @@ Execute Shell Command
     ${operation}=    Cumulocity.Execute Shell Command    ls -l /etc/tedge
     Cumulocity.Operation Should Be SUCCESSFUL    ${operation}
 
+Install application using docker compose
+    ${file_url}=    Cumulocity.Create Inventory Binary
+    ...    nodered
+    ...    docker-compose
+    ...    file=${CURDIR}/files/docker-compose.nodered.yaml
+    ${operation}=    Cumulocity.Install Software
+    ...    {"name": "nodered-instance1", "version": "1.0.0", "softwareType": "container-group", "url": "${file_url}"}
+    Cumulocity.Operation Should Be SUCCESSFUL    ${operation}
+    ${software}=    Device Should Have Installed Software
+    ...    {"name": "nodered-instance1", "version": "1.0.0", "softwareType": "container-group"}
+
 
 *** Keywords ***
 Get Configuration File
