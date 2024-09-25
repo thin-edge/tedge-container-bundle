@@ -1,6 +1,6 @@
-ARG TEDGE_TAG=1.2.1-134-ge4ff79b
+ARG TEDGE_TAG=1.3.0
 # thin-edge.io base image name: tedge, tedge-main
-ARG TEDGE_IMAGE=tedge-main
+ARG TEDGE_IMAGE=tedge
 FROM ghcr.io/thin-edge/${TEDGE_IMAGE}:${TEDGE_TAG}
 ARG TARGETPLATFORM
 ARG S6_OVERLAY_VERSION=3.2.0.0
@@ -45,9 +45,8 @@ RUN wget -O - https://thin-edge.io/install-services.sh | sh -s -- s6_overlay \
 
 # Set permissions of all files under /etc/tedge
 # TODO: Can thin-edge.io set permissions during installation?
-RUN chown -R tedge:tedge /etc/tedge \
-    # FIXME: Remove once https://github.com/thin-edge/thin-edge.io/pull/3120 is merged
-    && c8y-remote-access-plugin --init
+RUN chown -R tedge:tedge /etc/tedge
+
 
 # Custom init. scripts - e.g. write env variables data to files
 COPY cont-init.d/*  /etc/cont-init.d/
