@@ -8,6 +8,9 @@ Suite Setup     Set Main Device
 
 
 *** Test Cases ***
+Grace period to allow container to startup
+    Sleep    5s    reason=Wait for container to startup
+
 Restart device
     Skip
     ${date_from}=    Get Test Start Time
