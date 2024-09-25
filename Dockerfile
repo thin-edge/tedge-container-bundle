@@ -52,7 +52,7 @@ RUN wget -O - https://thin-edge.io/install-services.sh | sh -s -- s6_overlay \
 # Set permissions of all files under /etc/tedge
 # TODO: Can thin-edge.io set permissions during installation?
 RUN chown -R tedge:tedge /etc/tedge \
-    && echo "tedge  ALL = (ALL) NOPASSWD: /usr/bin/tedge, /etc/tedge/sm-plugins/[a-zA-Z0-9]*, /bin/sync, /sbin/init, /usr/bin/docker" >/etc/sudoers.d/tedge
+    && echo "tedge  ALL = (ALL) NOPASSWD: /usr/bin/tedge, /etc/tedge/sm-plugins/[a-zA-Z0-9]*, /bin/sync, /sbin/init, /usr/bin/tedgectl, /usr/bin/docker" >/etc/sudoers.d/tedge
 # Custom init. scripts - e.g. write env variables data to files
 COPY cont-init.d/*  /etc/cont-init.d/
 
@@ -95,6 +95,9 @@ ENV TEDGE_RUN_LOCK_FILES=false
 ENV TEDGE_MQTT_CLIENT_HOST=127.0.0.1
 ENV TEDGE_HTTP_CLIENT_HOST=127.0.0.1
 ENV TEDGE_C8Y_PROXY_CLIENT_HOST=127.0.0.1
+# Store the agent information in the persistent data
+# but don't share too much data as it can be destructive
+ENV TEDGE_AGENT_STATE_PATH=/mosquitto/data/agent
 
 # Allow mounting certificate files by volume
 VOLUME [ "/etc/tedge/device-certs" ]
