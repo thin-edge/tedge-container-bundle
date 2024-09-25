@@ -147,7 +147,7 @@ After the project pre-requisites have been installed, you can start the containe
 2. Init the device certificate (stored under `./device-cert)
 
     ```sh
-    just init "$DEVICE_ID"
+    just init
     ```
 
 3. Upload the device certificate to Cumulocity IoT

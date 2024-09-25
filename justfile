@@ -12,17 +12,13 @@ DEFAULT_OUTPUT_TYPE := "registry,dest=" + IMAGE + ".tar"
 
 RELEASE_VERSION := env_var_or_default("RELEASE_VERSION", `date +'%Y%m%d.%H%M'`)
 
-# Initialize the device certificate
+# Initialize the device certificate and upload to Cumulocity
 init *ARGS:
-    ./scripts/manage.sh init {{ARGS}}
-
-# Upload device certificate to Cumulocity IoT
-upload *ARGS:
-    CI=true ./scripts/manage.sh upload {{ARGS}}
+    docker compose --profile init up --build {{ARGS}}
 
 # Start the compose project
 start *ARGS:
-    docker compose up --build {{ARGS}}
+    docker compose --profile service up --build {{ARGS}}
 
 # Stop the compose project
 stop *ARGS:

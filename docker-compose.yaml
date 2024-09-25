@@ -1,4 +1,24 @@
 services:
+  init:
+    build:
+      dockerfile: Dockerfile
+      context: .
+    environment:
+      - DEVICE_ID=${DEVICE_ID:-}
+      - TEDGE_C8Y_URL=${TEDGE_C8Y_URL:-$C8Y_DOMAIN}
+      - C8Y_USER=${C8Y_USER:-}
+      - C8Y_PASSWORD=${C8Y_PASSWORD:-}
+    command:
+      - sh
+      - -c
+      - (tedge cert show >/dev/null 2>&1 || tedge cert create --device-id "$DEVICE_ID") && tedge cert upload c8y
+    volumes:
+      - device-certs:/etc/tedge/device-certs
+    profiles:
+      - init
+    networks:
+      - tedge
+
   tedge:
     build:
       dockerfile: Dockerfile
@@ -6,12 +26,23 @@ services:
     restart: always
     env_file:
       - .env
+    environment:
+      - DEVICE_ID=${DEVICE_ID:-}
+      - TEDGE_C8Y_URL=${TEDGE_C8Y_URL:-$C8Y_DOMAIN}
     tmpfs:
       - /tmp
     volumes:
-      - device_certs:/etc/tedge/device-certs
+      - device-certs:/etc/tedge/device-certs
+      - mosquitto:/mosquitto/data
+      - /var/run/docker.sock:/var/run/docker.sock:rw
+    profiles:
+      - service
+    networks:
+      - tedge
 
 volumes:
-  device_certs:
-    external:
-      name: device-certs
+  device-certs:
+  mosquitto:
+
+networks:
+  tedge:
