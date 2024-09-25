@@ -88,8 +88,8 @@ Before you can start the containers, you need to create a device certificate ins
 Once the device certificate has been created inside the named volume, the same volume can be used when starting the container.
 
 ```sh
-docker run --dns 8.8.8.8 --network host \
-    -d \
+docker run -d \
+    --name tedge \
     --restart=always \
     -v "device-certs:/etc/tedge/device-certs" \
     -v "mosquitto:/mosquitto/data" \
@@ -104,6 +104,7 @@ All of the thin-edge.io settings can be customized via environment variables, wh
 ```sh
 docker run --dns 8.8.8.8 --network host \
     -d \
+    --name "tedge" \
     --restart=always \
     -v "device-certs:/etc/tedge/device-certs" \
     -v "mosquitto:/mosquitto/data" \
@@ -116,6 +117,8 @@ docker run --dns 8.8.8.8 --network host \
     -e "TEDGE_C8Y_URL=$TEDGE_C8Y_URL" \
     ghcr.io/thin-edge/tedge-container-bundle:latest
 ```
+
+**Tip** You will have to change the `--dns <ip>` flag to a DNS server which is reachable on your device.
 
 ### Development
 
