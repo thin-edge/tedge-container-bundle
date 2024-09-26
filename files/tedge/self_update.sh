@@ -1,9 +1,16 @@
 #!/bin/sh
 set -e
 
+OK=0
+FAILED=1
+
 if [ "$DEBUG" = 1 ]; then
     set -x
 fi
+
+# TODOs
+# * Allow updating to an explicit image (don't always assume it is staying the same)
+#   * Allow flags to set the target image and tag (so don't read it from the image)
 
 usage() {
     cat << EOT
@@ -70,15 +77,15 @@ needs_update() {
 
     if [ "$IGNORE_IMAGE_CHECK" = 1 ]; then
         echo "Forcing a container update"
-        exit 0
+        exit "$OK"
     fi
 
     if [ "$CURRENT_IMAGE" = "$TARGET_IMAGE" ]; then
         echo "Container image is already up to date"
-        return 1
+        return "$FAILED"
     fi
     echo "New image is available. old=$CURRENT_IMAGE, new=$TARGET_IMAGE"
-    return 0
+    return "$OK"
 }
 
 is_container_running() {
@@ -90,12 +97,12 @@ wait_for_stop() {
     attempt=1
     while [ "$attempt" -le 90 ]; do
         if ! is_container_running "$CURRENT_CONTAINER_ID"; then
-            return 0
+            return "$OK"
         fi
         attempt=$((attempt+1))
         sleep 1
     done
-    return 1
+    return "$FAILED"
 }
 
 update() {
@@ -104,7 +111,7 @@ update() {
     # TODO: Wait for the container to stop (this is the hand-off)
     if ! wait_for_stop; then
         echo "Container was not shutdown. Aborting update"
-        exit 1
+        exit "$FAILED"
     fi
 
     # Make sure the container is stopped and not in the process of restarting
@@ -129,24 +136,35 @@ update() {
 }
 
 is_functional() {
-    # TODO: How thorough should this check be? Doing a connectivity check?
+    # Check container state
     IS_RUNNING=$($DOCKER_CMD inspect "$NEXT_CONTAINER_ID" --format "{{.State.Running}}" 2>/dev/null ||:)
     if [ "$IS_RUNNING" != true ]; then
-        return 1
+        return "$FAILED"
     fi
 
-    # FIXME: tedge command to check that all cloud connections are functional?
+    # Check cloud connectivity
     if $DOCKER_CMD exec -t "$NEXT_CONTAINER_ID" tedge config get c8y.url; then
         if ! $DOCKER_CMD exec -t "$NEXT_CONTAINER_ID" tedge connect c8y --test; then
-            return 1
+            return "$FAILED"
+        fi
+    fi
+
+    if $DOCKER_CMD exec -t "$NEXT_CONTAINER_ID" tedge config get aws.url; then
+        if ! $DOCKER_CMD exec -t "$NEXT_CONTAINER_ID" tedge connect aws --test; then
+            return "$FAILED"
+        fi
+    fi
+
+    if $DOCKER_CMD exec -t "$NEXT_CONTAINER_ID" tedge config get az.url; then
+        if ! $DOCKER_CMD exec -t "$NEXT_CONTAINER_ID" tedge connect az --test; then
+            return "$FAILED"
         fi
     fi
 
     CONTAINER_IMAGE=$($DOCKER_CMD inspect "$NEXT_CONTAINER_ID" --format "{{.Image}}")
     echo "New image: $CONTAINER_IMAGE"
 
-    # OK
-    return 0
+    return "$OK"
 }
 
 healthcheck() {
@@ -179,6 +197,18 @@ rollback() {
     $DOCKER_CMD start "$CURRENT_CONTAINER_ID" ||:
 }
 
+publish_message() {
+    topic_suffix="$1"
+    payload="$2"
+    shift
+    shift
+    TOPIC_ROOT=$(tedge config get mqtt.topic_root ||:)
+    TOPIC_ID=$(tedge config get mqtt.device_topic_id ||:)
+    if ! tedge mqtt pub -q 1 "$TOPIC_ROOT/$TOPIC_ID/$topic_suffix" "$payload" "$@"; then
+        echo "Warning: Failed to publish MQTT message" >&2
+    fi
+}
+
 update_background() {
     echo "Starting background container to perform the container update"
     UPDATER_CONTAINER_ID=$(
@@ -198,14 +228,12 @@ update_background() {
 
     if ! is_container_running "$UPDATER_CONTAINER_ID"; then
         echo "Container updater crashed. id=$UPDATER_CONTAINER_ID"
-        exit 1
+        exit "$FAILED"
     fi
 
     if [ -n "$TEDGE_VERSION" ]; then
-        TOPIC_ROOT=$(tedge config get mqtt.topic_root ||:)
-        TOPIC_ID=$(tedge config get mqtt.device_topic_id ||:)
         PAYLOAD=$(printf '{"text":"%s"}' "Updating thin-edge.io from $TEDGE_VERSION")
-        tedge mqtt pub -q 1 "$TOPIC_ROOT/$TOPIC_ID/e/tedge_self_update" "$PAYLOAD" ||:
+        publish_message "e/tedge_self_update" "$PAYLOAD"
     fi
 
     # Give some time for the message to be published
@@ -225,7 +253,7 @@ while [ $# -gt 0 ]; do
     case "$1" in
         --help|-h)
             usage
-            exit 0
+            exit "$OK"
             ;;
         --*|-*)
             ;;
@@ -250,40 +278,50 @@ case "$ACTION" in
         prepare
         if needs_update pull; then
             printf ':::begin-tedge:::\n{"tedgeVersion":"%s"}\n:::end-tedge:::\n' "$TEDGE_VERSION"
-            exit 0
+            exit "$OK"
         fi
         # Image is already up to date
-        exit 1
+        exit "$FAILED"
+        ;;
+    verify)
+        # TODO: Collect logs from the updater container and then delete it
+        # to enable easier debugging
+        prepare
+        if needs_update; then
+            # Update is still not up to date
+            exit "$FAILED"
+        fi
+
+        # Image is already up to date
+        PAYLOAD=$(printf '{"text":"%s"}' "Successfully updated thin-edge.io to $TEDGE_VERSION")
+        publish_message "e/tedge_self_update" "$PAYLOAD"
+        exit "$OK"
         ;;
     update_background)
         prepare
         if ! needs_update; then
-            exit 0
+            exit "$OK"
         fi
         update_background
         ;;
     update)
         prepare
         if ! needs_update; then
-            exit 0
+            exit "$OK"
         fi
         if ! update; then
             rollback
-            exit 0;
+            exit "$OK"
         fi
 
         if ! healthcheck; then
             rollback
         fi
         ;;
-    verify)
-        # TODO: Collect logs from the updater container and then delete it
-        # to enable easier debugging
-        ;;
     *)
         echo "Unknown command. $ACTION" >&2
         usage
-        exit 1
+        exit "$FAILED"
         ;;
 esac
 

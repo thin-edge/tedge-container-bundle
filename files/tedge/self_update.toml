@@ -2,7 +2,7 @@ operation = "self_update"
 
 [init]
 action = "proceed"
-on_success = "executing"
+on_success = "schedule"
 
 [schedule]
 action = "proceed"
@@ -20,25 +20,25 @@ on_exit._ = "failed"
 
 [update]
 script = "self_update.sh update_background"
-on_success = "shutdown_container"
+on_success = "restart"
 on_error = "failed"
 
-[shutdown_container]
+[restart]
 # Note: a restart will trigger a container shutdown
+# and the new container will resume processing the operation
 operation = "restart"
-on_exec = "await_container_startup"
+on_exec = "await_restart"
 
-[await_container_startup]
+[await_restart]
+# The new container will resume from this point
+# (assuming the workflow state file is shared between the old and new container)
 action = "await-operation-completion"
 on_success = "verify"
 
 [verify]
-# The container should be up to date after
-# if it isn't then something went wrong
-script = "self_update.sh needs_update"
-on_exit.0 = "failed"
-on_exit.1 = "successful"
-on_exit._ = "failed"
+script = "self_update.sh verify"
+on_success = "successful"
+on_error = "failed"
 
 [successful]
 action = "cleanup"
