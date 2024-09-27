@@ -18,7 +18,7 @@ init *ARGS:
 
 # Start the compose project
 start *ARGS: build-local
-    docker compose --profile service up --build {{ARGS}}
+    COMPOSE_PROJECT_NAME= docker compose --profile service up --build {{ARGS}}
 
 # Stop the compose project
 stop *ARGS:
@@ -30,7 +30,7 @@ build-setup:
 
 # Build a local image that can be used for self update
 build-local:
-    docker compose --profile service build
+    COMPOSE_PROJECT_NAME= docker compose --profile service build
     docker tag tedge-container-bundle-tedge tedge-container-bundle-tedge-next
 
 # Run the image localy using docker only (not docker compose)
