@@ -8,10 +8,6 @@ if [ "$DEBUG" = 1 ]; then
     set -x
 fi
 
-# TODOs
-# * Allow updating to an explicit image (don't always assume it is staying the same)
-#   * Allow flags to set the target image and tag (so don't read it from the image)
-
 usage() {
     cat << EOT
 $0 needs_update     - Check if the container image is up to date. exit=0 means an update is necessary
@@ -22,16 +18,18 @@ Trigger a self update of a container with a given container name
 EOT
 }
 
-TAG="${TAG:-latest}"
-# IMAGE_NAME="ghcr.io/thin-edge/tedge-container-bundle:${TAG}"
-IMAGE_NAME="tedge-container-bundle"
-NETWORK_MODE=tedge
+IMAGE="${IMAGE:-}"
+NETWORK_MODE=${NETWORK_MODE:-tedge}
 
 CONTAINER_NAME="${CONTAINER_NAME:-tedge}"
 TEDGE_C8Y_URL="${TEDGE_C8Y_URL:-}"
-CURRENT_IMAGE=
-TARGET_IMAGE=
-IGNORE_IMAGE_CHECK=0
+CURRENT_IMAGE_ID=
+TARGET_IMAGE_ID=
+FORCE=0
+
+# Internal
+CURRENT_CONTAINER_ID=
+CURRENT_CONTAINER_CONFIG_IMAGE=
 
 DOCKER_CMD=docker
 if ! docker ps >/dev/null 2>&1; then
@@ -40,17 +38,25 @@ if ! docker ps >/dev/null 2>&1; then
     fi
 fi
 
+log() {
+    echo "INFO $*" >&2
+}
+
 prepare() {
-    echo "Preparing for updating container with name=$CONTAINER_NAME"
+    log "Preparing for updating container. name=$CONTAINER_NAME"
     # Use container id to prevent any unexpected changes
     CURRENT_CONTAINER_ID=$($DOCKER_CMD inspect "$CONTAINER_NAME" --format "{{.Id}}" ||:)
+    CURRENT_CONTAINER_CONFIG_IMAGE=$($DOCKER_CMD inspect "$CONTAINER_NAME" --format "{{.Config.Image}}" ||:)
 
-    name=$($DOCKER_CMD inspect "$CURRENT_CONTAINER_ID" --format "{{.Config.Image}}" ||:)
-    if [ -n "$name" ]; then
-        IMAGE_NAME="$name"
+    if [ -z "$IMAGE" ]; then
+        value=$($DOCKER_CMD inspect "$CURRENT_CONTAINER_ID" --format "{{.Config.Image}}" ||:)
+        if [ -n "$value" ]; then
+            IMAGE="$value"
+            log "Detected container image from container. id=$CURRENT_CONTAINER_ID, image=$value"
+        fi
     fi
 
-    # Get required parameters from container before stopping it
+    # Get required parameters from the existing container
     value=$($DOCKER_CMD exec "$CURRENT_CONTAINER_ID" tedge config get c8y.url ||:)
     if [ -n "$value" ]; then
         TEDGE_C8Y_URL="$value"
@@ -63,28 +69,46 @@ prepare() {
 }
 
 needs_update() {
-    CURRENT_IMAGE=$($DOCKER_CMD inspect "$CURRENT_CONTAINER_ID" --format "{{.Image}}" ||:)
-    echo "Current image: $CURRENT_IMAGE"
+    CURRENT_IMAGE_ID=$($DOCKER_CMD inspect "$CURRENT_CONTAINER_ID" --format "{{.Image}}" ||:)
+    CURRENT_IMAGE_NAME=$($DOCKER_CMD inspect "$CURRENT_CONTAINER_ID" --format "{{.Config.Image}}" ||:)
+    log "Current container. imageId=$CURRENT_IMAGE_ID, imageName=$CURRENT_IMAGE_NAME"
 
     case "${1:-}" in
         pull)
-            echo "Pulling new image: ${IMAGE_NAME}"
-            $DOCKER_CMD pull "$IMAGE_NAME" >/dev/null ||:
+            log "Pulling new image: ${IMAGE}"
+            $DOCKER_CMD pull "$IMAGE" >/dev/null ||:
             ;;
     esac
 
-    TARGET_IMAGE=$($DOCKER_CMD image inspect "$IMAGE_NAME" --format "{{.Id}}")
+    TARGET_IMAGE_ID=$($DOCKER_CMD image inspect "$IMAGE" --format "{{.Id}}")
 
-    if [ "$IGNORE_IMAGE_CHECK" = 1 ]; then
-        echo "Forcing a container update"
-        exit "$OK"
+    if [ "$FORCE" = 1 ]; then
+        log "Forcing a container update"
+        return "$OK"
     fi
 
-    if [ "$CURRENT_IMAGE" = "$TARGET_IMAGE" ]; then
-        echo "Container image is already up to date"
-        return "$FAILED"
+    # TODO: Also check if the image name has changed
+    # IMAGE_NAME_MATCHES=0    
+    # TARGET_IMAGE_TAGS=$(docker image inspect tedge-container-bundle-tedge-next --format '{{.RepoTags | json}}' | jq -r '. | @tsv')
+    # for tag in $TARGET_IMAGE_TAGS; do
+    #     if [ "$tag" = "$CURRENT_IMAGE_NAME" ]; then
+    #         IMAGE_NAME_MATCHES=1
+    #         break
+    #     fi
+    # done
+
+    if [ "$CURRENT_IMAGE_ID" = "$TARGET_IMAGE_ID" ]; then
+        # Note: Treat an image name/tag change the same as a new image
+        # as the user may want to rename the container to be more descriptive
+        if [ "$CURRENT_IMAGE_NAME" = "$IMAGE" ]; then
+            log "Container image is already up to date"
+            return "$FAILED"
+        else
+            log "Image id is the same, however the image name has changed. old=$CURRENT_IMAGE_NAME, new=$IMAGE"
+        fi
     fi
-    echo "New image is available. old=$CURRENT_IMAGE, new=$TARGET_IMAGE"
+
+    log "New image is available. old=$CURRENT_IMAGE_NAME ($CURRENT_IMAGE_ID), new=$IMAGE ($TARGET_IMAGE_ID)"
     return "$OK"
 }
 
@@ -106,11 +130,11 @@ wait_for_stop() {
 }
 
 update() {
-    echo "Removing existing container. name=$CONTAINER_NAME, id=$CURRENT_CONTAINER_ID"
+    log "Removing existing container. name=$CONTAINER_NAME, id=$CURRENT_CONTAINER_ID"
 
     # TODO: Wait for the container to stop (this is the hand-off)
     if ! wait_for_stop; then
-        echo "Container was not shutdown. Aborting update"
+        log "Container was not shutdown. Aborting update"
         exit "$FAILED"
     fi
 
@@ -121,7 +145,9 @@ update() {
     $DOCKER_CMD rm "${CONTAINER_NAME}-bak" ||:
     $DOCKER_CMD container rename "$CURRENT_CONTAINER_ID" "${CONTAINER_NAME}-bak"
 
-    echo "Starting the tedge container. name=$CONTAINER_NAME"
+    log "Starting the tedge container. name=$CONTAINER_NAME"
+    # FIXME: How to launch a new container using all the exact same arguments as the
+    # existing container (without having to pull in a python dependency)
     NEXT_CONTAINER_ID=$(
         $DOCKER_CMD run -d \
             --name "$CONTAINER_NAME" \
@@ -131,7 +157,7 @@ update() {
             -v "mosquitto:/mosquitto/data" \
             -v /var/run/docker.sock:/var/run/docker.sock:rw \
             -e "TEDGE_C8Y_URL=${TEDGE_C8Y_URL}" \
-            "$IMAGE_NAME"
+            "$IMAGE"
     )
 }
 
@@ -162,13 +188,13 @@ is_functional() {
     fi
 
     CONTAINER_IMAGE=$($DOCKER_CMD inspect "$NEXT_CONTAINER_ID" --format "{{.Image}}")
-    echo "New image: $CONTAINER_IMAGE"
+    log "New image: $CONTAINER_IMAGE"
 
     return "$OK"
 }
 
 healthcheck() {
-    echo "Checking new container's health"
+    log "Checking new container's health"
     sleep 2
     ATTEMPT=1
     TIMED_OUT=0
@@ -178,7 +204,7 @@ healthcheck() {
             break
         fi
         if is_functional; then
-            echo "Container is working"
+            log "Container is working"
             break
         fi
         ATTEMPT=$((ATTEMPT+1))
@@ -189,6 +215,7 @@ healthcheck() {
 }
 
 rollback() {
+    log "Rolling back"
     $DOCKER_CMD stop "$NEXT_CONTAINER_ID" ||:
     $DOCKER_CMD rm "$NEXT_CONTAINER_ID" ||:
 
@@ -205,55 +232,80 @@ publish_message() {
     TOPIC_ROOT=$(tedge config get mqtt.topic_root ||:)
     TOPIC_ID=$(tedge config get mqtt.device_topic_id ||:)
     if ! tedge mqtt pub -q 1 "$TOPIC_ROOT/$TOPIC_ID/$topic_suffix" "$payload" "$@"; then
-        echo "Warning: Failed to publish MQTT message" >&2
+        log "Warning: Failed to publish MQTT message" >&2
     fi
 }
 
 update_background() {
-    echo "Starting background container to perform the container update"
+    log "Starting background container to perform the container update"
+
+    PAYLOAD=$(
+        printf '{"text":"%s","image":"%s","containerId":"%s"}' \
+        "New thin-edge.io version detected. Starting background update from $TEDGE_VERSION" \
+        "$CURRENT_CONTAINER_CONFIG_IMAGE" \
+        "$CURRENT_CONTAINER_ID"
+    )
+    publish_message "e/tedge_self_update" "$PAYLOAD"
+
+    OPTIONS=""
+    if [ "$FORCE" = 1 ]; then
+        OPTIONS="$OPTIONS --force"
+    fi
+    # shellcheck disable=SC2086
+    set -- $OPTIONS
+    # FIXME: Remove --rm option, and use a predictable name so that logs can be collected
+    # to help debug a failed update
     UPDATER_CONTAINER_ID=$(
         $DOCKER_CMD run -d \
+            --rm \
             -v /var/run/docker.sock:/var/run/docker.sock:rw \
-            "$IMAGE_NAME" \
-            "$0" update
+            "$IMAGE" \
+            "$0" update --image "$IMAGE" "$@"
     )
-    echo "Update container id: $UPDATER_CONTAINER_ID"
+    log "Update container id: $UPDATER_CONTAINER_ID"
 
     # Set the container to restart (but only after the background service was launched successfully)
-    echo "Setting restart policy to no for existing container"
+    log "Setting restart policy to no for existing container"
     $DOCKER_CMD container update "${CURRENT_CONTAINER_ID}" --restart no
 
     # wait for service to start and be stable
     sleep 5
 
     if ! is_container_running "$UPDATER_CONTAINER_ID"; then
-        echo "Container updater crashed. id=$UPDATER_CONTAINER_ID"
+        log "Container updater crashed. id=$UPDATER_CONTAINER_ID"
         exit "$FAILED"
-    fi
-
-    if [ -n "$TEDGE_VERSION" ]; then
-        PAYLOAD=$(printf '{"text":"%s"}' "Updating thin-edge.io from $TEDGE_VERSION")
-        publish_message "e/tedge_self_update" "$PAYLOAD"
     fi
 
     # Give some time for the message to be published
     sleep 5
-
-    # Wait for the process to be killed by the background updater
-    # sleep 90
-    # exit 1
 }
 
 #
 # Argument parsing
 #
 ACTION=
+UPDATE_LIST=
 
 while [ $# -gt 0 ]; do
     case "$1" in
         --help|-h)
             usage
             exit "$OK"
+            ;;
+        --image)
+            IMAGE="$2"
+            shift
+            ;;
+        --container-name)
+            CONTAINER_NAME="$2"
+            shift
+            ;;
+        --update-list)
+            UPDATE_LIST="$2"
+            shift
+            ;;
+        --force)
+            FORCE=1
             ;;
         --*|-*)
             ;;
@@ -274,6 +326,61 @@ if command -V tedge >/dev/null 2>&1; then
 fi
 
 case "$ACTION" in
+    is_update_requested)
+        #
+        # Determine if the software_update command includes a request
+        # to update its own container.
+        # Also parse the request and store the desired image
+        #
+        YES=0
+        NO=1
+        ERROR=2
+        MODULE=$(echo "$UPDATE_LIST" | jq -r '.[] | select(.type == "self") | .modules | first | [.action, .name, .version] | @tsv' ||:)
+        if [ -z "$MODULE" ]; then
+            log "update list does not contain a self-update sm-plugin"
+            exit "$NO"
+        fi
+
+        # name = Container name
+        # version = Desired image (config) name. e.g. "latest" or "tedge-example" or "tedge-example:1.2.3"
+        # Note, if 'latest' is used, then lookup the running container's currently configured image config name
+        OP_ACTION=$(echo "$MODULE" | cut -f1)
+        OP_NAME=$(echo "$MODULE" | cut -f2)
+        OP_VERSION=$(echo "$MODULE" | cut -f3)
+
+        log "Parsed module information. action=$OP_ACTION, name=$OP_NAME, version=$OP_VERSION"
+        if [ "$OP_ACTION" != "install" ]; then
+            log "Invalid action detected. Action must be set to 'install'. No other value is supported"
+            exit "$ERROR"
+        fi
+
+        if [ -z "$OP_VERSION" ]; then
+            log "module version is empty. The update request is too vague"
+            exit "$NO"
+        fi
+
+        if [ "$OP_VERSION" = "latest" ]; then
+            # Exclude the ":latest" suffix to allow using a local image. With ":latest", docker assumes it is a registry image
+            # TODO: Check if this is intended behaviour
+            OP_VERSION="$(echo "$CURRENT_CONTAINER_CONFIG_IMAGE" | cut -d: -f1)"
+            log "Module image is set to 'latest' so assuming that the container config image should stay the same. new_image=$OP_VERSION"
+        fi
+
+        printf ':::begin-tedge:::\n'
+        printf '{"containerName":"%s","image":"%s"}\n' "$OP_NAME" "$OP_VERSION"
+        printf ':::end-tedge:::\n'
+        exit "$YES"
+        ;;
+    version)
+        prepare
+        printf '%s\t%s:%s\n' "$CONTAINER_NAME" "$CURRENT_CONTAINER_CONFIG_IMAGE" "$TEDGE_VERSION"
+        ;;
+    operation_parameters)
+        printf ':::begin-tedge:::\n'
+        printf '{"image":"%s","containerName":"%s"}\n' "$IMAGE" "$CONTAINER_NAME"
+        printf ':::end-tedge:::\n'
+        exit "$OK"
+        ;;
     needs_update)
         prepare
         if needs_update pull; then
@@ -293,7 +400,12 @@ case "$ACTION" in
         fi
 
         # Image is already up to date
-        PAYLOAD=$(printf '{"text":"%s"}' "Successfully updated thin-edge.io to $TEDGE_VERSION")
+        PAYLOAD=$(
+            printf '{"text":"%s","image":"%s","containerId":"%s"}' \
+            "Successfully updated thin-edge.io to $TEDGE_VERSION" \
+            "$CURRENT_CONTAINER_CONFIG_IMAGE" \
+            "$CURRENT_CONTAINER_ID"
+        )
         publish_message "e/tedge_self_update" "$PAYLOAD"
         exit "$OK"
         ;;

@@ -9,10 +9,9 @@ USER root
 
 # Notes: ca-certificates is required for the initial connection with c8y, otherwise the c8y cert is not trusted
 # to test out the connection. But this is only needed for the initial connection, so it seems unnecessary
-RUN apk update \
-    && apk add --no-cache \
-        ca-certificates \
+RUN apk add --no-cache \
         mosquitto \
+        jq \
         bash \
         curl \
         # GNU sed (to provide the unbuffered streaming option used in the log parsing)
@@ -41,6 +40,11 @@ RUN wget -O - https://thin-edge.io/install-services.sh | sh -s -- s6_overlay \
     && apk add --no-cache \
         c8y-command-plugin \
         tedge-apk-plugin \
+        # Note: Adding docker and compose adds ~75MB to the image
+        # FIXME: Either create another client, or enforce users to mount
+        # the docker cli and lib into the image
+        # apk add --no-cache libltdl
+        # -v /usr/bin/docker:/usr/bin/docker
         docker-cli \
         # Enable easier management of containers using docker compose
         # without requiring the cli to be installed on the host (as read-only filesystems)
@@ -65,6 +69,8 @@ COPY files/mosquitto/mosquitto.conf /etc/mosquitto/mosquitto.conf
 COPY files/tedge/tedge.toml /etc/tedge/
 COPY files/tedge/plugins/*.toml /etc/tedge/plugins/
 # Self update workflow
+COPY files/tedge/self.sh /etc/tedge/sm-plugins/self
+COPY files/tedge/software_update.toml /etc/tedge/operations/
 COPY files/tedge/self_update.toml /etc/tedge/operations/
 COPY files/tedge/self_update.sh /usr/bin/
 
@@ -98,6 +104,7 @@ ENV TEDGE_C8Y_PROXY_CLIENT_HOST=127.0.0.1
 # Store the agent information in the persistent data
 # but don't share too much data as it can be destructive
 ENV TEDGE_AGENT_STATE_PATH=/mosquitto/data/agent
+ENV TEDGE_LOGS_PATH=/mosquitto/data/logs
 
 # Allow mounting certificate files by volume
 VOLUME [ "/etc/tedge/device-certs" ]
