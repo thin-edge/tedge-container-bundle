@@ -75,7 +75,7 @@ Before you can start the containers, you need to create a device certificate ins
     If you don't want to be prompted for the Cumulocity IoT Username and Password (required to upload the certificate), then you can provide them via the following environment variables:
 
     ```sh
-    docker run --rm -it --dns 8.8.8.8 --network host \
+    docker run --rm -it \
         -v "device-certs:/etc/tedge/device-certs" \
         -e "TEDGE_C8Y_URL=${TEDGE_C8Y_URL}" \
         -e "C8Y_USER=$C8Y_USER" \
