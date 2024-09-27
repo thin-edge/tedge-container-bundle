@@ -43,10 +43,10 @@ services:
 
 volumes:
   device-certs:
-    external: true
+    name: device-certs
   mosquitto:
-    external: true
+    name: mosquitto
 
 networks:
   tedge:
-    external: true
+    name: tedge
