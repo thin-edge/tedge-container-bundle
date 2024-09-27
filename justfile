@@ -2,7 +2,7 @@ set dotenv-load
 
 IMAGE := "tedge-container-bundle"
 TEDGE_IMAGE := "tedge"
-TEDGE_TAG := "1.2.0"
+TEDGE_TAG := "1.3.0"
 TAG := "latest"
 ENV_FILE := ".env"
 
@@ -17,8 +17,8 @@ init *ARGS:
     docker compose --profile init up --build {{ARGS}}
 
 # Start the compose project
-start *ARGS:
-    docker compose --profile service up --build {{ARGS}}
+start *ARGS: build-local
+    COMPOSE_PROJECT_NAME= docker compose --profile service up --build {{ARGS}}
 
 # Stop the compose project
 stop *ARGS:
@@ -27,6 +27,25 @@ stop *ARGS:
 # Enabling running cross platform tools when building container images
 build-setup:
     docker run --privileged --rm tonistiigi/binfmt --install all
+
+# Build a local image that can be used for self update
+build-local:
+    COMPOSE_PROJECT_NAME= docker compose --profile service build
+    docker tag tedge-container-bundle-tedge tedge-container-bundle-tedge-next
+
+# Run the image localy using docker only (not docker compose)
+run-local: build-local
+    docker rm -f tedge
+    docker run -d \
+        --name tedge \
+        --restart=always \
+        --network tedge \
+        --tmpfs /tmp \
+        -v "device-certs:/etc/tedge/device-certs" \
+        -v "mosquitto:/mosquitto/data" \
+        -v /var/run/docker.sock:/var/run/docker.sock:rw \
+        -e "TEDGE_C8Y_URL=$TEDGE_C8Y_URL" \
+        tedge-container-bundle-tedge
 
 # Build the docker images
 # Example:
@@ -53,6 +72,11 @@ lint *ARGS:
 # Run tests
 test *ARGS='':
     ./.venv/bin/python3 -m robot.run --outputdir output {{ARGS}} tests
+
+# Run self-update tests
+test-self-update *ARGS='':
+    just -f {{justfile()}} run-local
+    ./.venv/bin/python3 -m robot.run --include "self-update" --outputdir output {{ARGS}} tests
 
 # Cleanup device and all it's dependencies
 cleanup DEVICE_ID $CI="true":
