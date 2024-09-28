@@ -1,6 +1,13 @@
 #!/bin/sh
 set -e
 
+if ! command -V docker >/dev/null 2>&1 || [ ! -e /var/run/docker.sock ]; then
+    echo "Launching session as a child process"
+    c8y-remote-access-plugin "$@"
+    exit 0
+fi
+
+echo "Launching session in an independent container"
 DOCKER_CMD=docker
 if ! docker ps >/dev/null 2>&1; then
     if command -V sudo >/dev/null 2>&1; then
