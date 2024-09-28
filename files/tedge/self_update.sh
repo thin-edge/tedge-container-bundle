@@ -41,10 +41,12 @@ log() {
 }
 
 prepare() {
-    log "Preparing for updating container. name=$CONTAINER_NAME"
     # Use container id to prevent any unexpected changes
     if [ -z "$CURRENT_CONTAINER_ID" ]; then
+        log "Reading container configuration by name. name=$CONTAINER_NAME"
         CURRENT_CONTAINER_ID=$($DOCKER_CMD inspect "$CONTAINER_NAME" --format "{{.Id}}" ||:)
+    else
+        log "Reading container configuration by id. id=$CURRENT_CONTAINER_ID"
     fi
     CURRENT_CONTAINER_CONFIG_IMAGE=$($DOCKER_CMD inspect "$CURRENT_CONTAINER_ID" --format "{{.Config.Image}}" ||:)
 
@@ -68,7 +70,7 @@ needs_update() {
             if $DOCKER_CMD pull "$IMAGE"; then
                 log "Successfully pulled new image"
             else
-                log "Failled to pull image. Trying to continue"
+                log "Failed to pull image. Trying to continue"
             fi
             ;;
     esac
