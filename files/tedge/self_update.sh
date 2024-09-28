@@ -19,10 +19,8 @@ EOT
 }
 
 IMAGE="${IMAGE:-}"
-NETWORK_MODE=${NETWORK_MODE:-tedge}
 
 CONTAINER_NAME="${CONTAINER_NAME:-tedge}"
-TEDGE_C8Y_URL="${TEDGE_C8Y_URL:-}"
 CURRENT_IMAGE_ID=
 TARGET_IMAGE_ID=
 FORCE=0
@@ -45,8 +43,10 @@ log() {
 prepare() {
     log "Preparing for updating container. name=$CONTAINER_NAME"
     # Use container id to prevent any unexpected changes
-    CURRENT_CONTAINER_ID=$($DOCKER_CMD inspect "$CONTAINER_NAME" --format "{{.Id}}" ||:)
-    CURRENT_CONTAINER_CONFIG_IMAGE=$($DOCKER_CMD inspect "$CONTAINER_NAME" --format "{{.Config.Image}}" ||:)
+    if [ -z "$CURRENT_CONTAINER_ID" ]; then
+        CURRENT_CONTAINER_ID=$($DOCKER_CMD inspect "$CONTAINER_NAME" --format "{{.Id}}" ||:)
+    fi
+    CURRENT_CONTAINER_CONFIG_IMAGE=$($DOCKER_CMD inspect "$CURRENT_CONTAINER_ID" --format "{{.Config.Image}}" ||:)
 
     if [ -z "$IMAGE" ]; then
         value=$($DOCKER_CMD inspect "$CURRENT_CONTAINER_ID" --format "{{.Config.Image}}" ||:)
@@ -54,17 +54,6 @@ prepare() {
             IMAGE="$value"
             log "Detected container image from container. id=$CURRENT_CONTAINER_ID, image=$value"
         fi
-    fi
-
-    # Get required parameters from the existing container
-    value=$($DOCKER_CMD exec "$CURRENT_CONTAINER_ID" tedge config get c8y.url ||:)
-    if [ -n "$value" ]; then
-        TEDGE_C8Y_URL="$value"
-    fi
-
-    value=$($DOCKER_CMD inspect tedge --format "{{.HostConfig.NetworkMode}}" ||:)
-    if [ -n "$value" ]; then
-        NETWORK_MODE="$value"
     fi
 }
 
@@ -75,8 +64,12 @@ needs_update() {
 
     case "${1:-}" in
         pull)
-            log "Pulling new image: ${IMAGE}"
-            $DOCKER_CMD pull "$IMAGE" >/dev/null ||:
+            log "Trying to pull new image: ${IMAGE}"
+            if $DOCKER_CMD pull "$IMAGE"; then
+                log "Successfully pulled new image"
+            else
+                log "Failled to pull image. Trying to continue"
+            fi
             ;;
     esac
 
@@ -86,16 +79,6 @@ needs_update() {
         log "Forcing a container update"
         return "$OK"
     fi
-
-    # TODO: Also check if the image name has changed
-    # IMAGE_NAME_MATCHES=0    
-    # TARGET_IMAGE_TAGS=$(docker image inspect tedge-container-bundle-tedge-next --format '{{.RepoTags | json}}' | jq -r '. | @tsv')
-    # for tag in $TARGET_IMAGE_TAGS; do
-    #     if [ "$tag" = "$CURRENT_IMAGE_NAME" ]; then
-    #         IMAGE_NAME_MATCHES=1
-    #         break
-    #     fi
-    # done
 
     if [ "$CURRENT_IMAGE_ID" = "$TARGET_IMAGE_ID" ]; then
         # Note: Treat an image name/tag change the same as a new image
@@ -129,10 +112,41 @@ wait_for_stop() {
     return "$FAILED"
 }
 
+generate_run_flags_from_container() {
+    CONTAINER_SPEC=$($DOCKER_CMD inspect "$1")
+
+    FLAGS_NETWORK_MODE=$(echo "$CONTAINER_SPEC" | jq -r '"--network \"" + .[0].HostConfig.NetworkMode + "\""')
+    FLAGS_DNS=$(echo "$CONTAINER_SPEC" | jq -r '[.[0].HostConfig.Dns[] | "--dns \"" + . + "\""] | join(" ")')
+
+    # TODO: This only supports simple mounts and ignores the options
+    FLAGS_HOST_BINDS=$(echo "$CONTAINER_SPEC" | jq -r '[.[0].Mounts[] | select(.Type == "bind") | "-v \"" + .Source + ":" + .Destination + ":" + .Mode + "\""] | join(" ")')
+    FLAGS_MOUNTS=$(echo "$CONTAINER_SPEC" | jq -r '[.[0].Mounts[] | select(.Type == "volume") | "-v \"" + .Name + ":" + .Destination + "\""] | join(" ")')
+    FLAGS_TMPFS=$(echo "$CONTAINER_SPEC" | jq -r '[.[0].HostConfig.Tmpfs // {} | to_entries | .[] | "--tmpfs \"" + .key + "\""] | join(" ")')
+    
+    FLAGS_ENV=$(echo "$CONTAINER_SPEC" | jq -r '[.[0].Config.Env[] | "-e \"" + . + "\""] | join(" ")')
+
+    FLAGS_PORT_BINDINGS=$(docker inspect tedge | jq -r '[.[0].HostConfig.PortBindings | to_entries[] | .key as $port | .value[] | "-p " + (if .HostIp != "" then .HostIp + ":" + .HostPort + ":" + $port else .HostPort + ":" + $port end) ] | flatten | join(" ")')
+
+    # Allow users to also edit which options they would like to run with
+    CONTAINER_RUN_OPTIONS=${CONTAINER_RUN_OPTIONS:-}
+
+    echo "$FLAGS_NETWORK_MODE $FLAGS_DNS $FLAGS_PORT_BINDINGS $FLAGS_TMPFS $FLAGS_HOST_BINDS $FLAGS_MOUNTS $FLAGS_ENV $CONTAINER_RUN_OPTIONS"
+}
+
+generate_run_command_from_container() {
+    CONTAINER_SPEC="$1"
+    name="$2"
+    image="$3"
+
+    RUN_OPTIONS=$(generate_run_flags_from_container "$CONTAINER_SPEC")
+    RUN_COMMAND="$DOCKER_CMD run -d --name \"$name\" $RUN_OPTIONS $image"
+    echo "$RUN_COMMAND"
+}
+
 update() {
     log "Removing existing container. name=$CONTAINER_NAME, id=$CURRENT_CONTAINER_ID"
 
-    # TODO: Wait for the container to stop (this is the hand-off)
+    # Wait for the container to stop (this is the hand-off)
     if ! wait_for_stop; then
         log "Container was not shutdown. Aborting update"
         exit "$FAILED"
@@ -146,18 +160,9 @@ update() {
     $DOCKER_CMD container rename "$CURRENT_CONTAINER_ID" "${CONTAINER_NAME}-bak"
 
     log "Starting the tedge container. name=$CONTAINER_NAME"
-    # FIXME: How to launch a new container using all the exact same arguments as the
-    # existing container (without having to pull in a python dependency)
+    RUN_COMMAND=$(generate_run_command_from_container "$CURRENT_CONTAINER_ID" "$CONTAINER_NAME" "$IMAGE")
     NEXT_CONTAINER_ID=$(
-        $DOCKER_CMD run -d \
-            --name "$CONTAINER_NAME" \
-            --restart=always \
-            --network "$NETWORK_MODE" \
-            -v "device-certs:/etc/tedge/device-certs" \
-            -v "mosquitto:/mosquitto/data" \
-            -v /var/run/docker.sock:/var/run/docker.sock:rw \
-            -e "TEDGE_C8Y_URL=${TEDGE_C8Y_URL}" \
-            "$IMAGE"
+        eval "$RUN_COMMAND"
     )
 }
 
@@ -253,14 +258,14 @@ update_background() {
     fi
     # shellcheck disable=SC2086
     set -- $OPTIONS
-    # FIXME: Remove --rm option, and use a predictable name so that logs can be collected
+    # TODO: Remove --rm option, and use a predictable name so that logs can be collected
     # to help debug a failed update
     UPDATER_CONTAINER_ID=$(
         $DOCKER_CMD run -d \
             --rm \
             -v /var/run/docker.sock:/var/run/docker.sock:rw \
             "$IMAGE" \
-            "$0" update --image "$IMAGE" "$@"
+            "$0" update --image "$IMAGE" --container-name "$CONTAINER_NAME" --container-id "$CURRENT_CONTAINER_ID" "$@"
     )
     log "Update container id: $UPDATER_CONTAINER_ID"
 
@@ -298,6 +303,10 @@ while [ $# -gt 0 ]; do
             ;;
         --container-name)
             CONTAINER_NAME="$2"
+            shift
+            ;;
+        --container-id)
+            CURRENT_CONTAINER_ID="$2"
             shift
             ;;
         --update-list)
@@ -415,6 +424,14 @@ case "$ACTION" in
             exit "$OK"
         fi
         update_background
+        ;;
+    print_run_command)
+        # Help debug the docker run arguments (inferred from an already spawned container)
+        echo "" >&2
+        echo "The following command is used to spawn a new container (copying from an already running container)" >&2
+        echo "" >&2
+        RUN_COMMAND=$(generate_run_command_from_container "$CONTAINER_NAME" "$CONTAINER_NAME" "${IMAGE:-tedge}")
+        echo "$RUN_COMMAND"
         ;;
     update)
         prepare
