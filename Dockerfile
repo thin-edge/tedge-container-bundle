@@ -14,8 +14,6 @@ RUN apk add --no-cache \
         jq \
         bash \
         curl \
-        # GNU sed (to provide the unbuffered streaming option used in the log parsing)
-        sed \
         sudo
 
 # Install s6-overlay
