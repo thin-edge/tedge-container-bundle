@@ -119,6 +119,7 @@ generate_run_flags_from_container() {
 
     FLAGS_NETWORK_MODE=$(echo "$CONTAINER_SPEC" | jq -r '"--network \"" + .[0].HostConfig.NetworkMode + "\""')
     FLAGS_DNS=$(echo "$CONTAINER_SPEC" | jq -r '[.[0].HostConfig.Dns[] | "--dns \"" + . + "\""] | join(" ")')
+    FLAGS_EXTRA_HOSTS=$(echo "$CONTAINER_SPEC" | jq -r '[.[0].HostConfig.ExtraHosts // [] | .[] | "--add-host " + .] | join(" ")')
 
     # TODO: This only supports simple mounts and ignores the options
     FLAGS_HOST_BINDS=$(echo "$CONTAINER_SPEC" | jq -r '[.[0].Mounts[] | select(.Type == "bind") | "-v \"" + .Source + ":" + .Destination + ":" + .Mode + "\""] | join(" ")')
@@ -132,7 +133,7 @@ generate_run_flags_from_container() {
     # Allow users to also edit which options they would like to run with
     CONTAINER_RUN_OPTIONS=${CONTAINER_RUN_OPTIONS:-}
 
-    echo "$FLAGS_NETWORK_MODE $FLAGS_DNS $FLAGS_PORT_BINDINGS $FLAGS_TMPFS $FLAGS_HOST_BINDS $FLAGS_MOUNTS $FLAGS_ENV $CONTAINER_RUN_OPTIONS"
+    echo "$FLAGS_NETWORK_MODE $FLAGS_DNS $FLAGS_EXTRA_HOSTS $FLAGS_PORT_BINDINGS $FLAGS_TMPFS $FLAGS_HOST_BINDS $FLAGS_MOUNTS $FLAGS_ENV $CONTAINER_RUN_OPTIONS"
 }
 
 generate_run_command_from_container() {
