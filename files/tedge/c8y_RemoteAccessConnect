@@ -1,0 +1,4 @@
+[exec]
+command = "launch-remote-access.sh"
+topic = "c8y/s/ds"
+on_message = "530"
