@@ -107,6 +107,10 @@ ENV TEDGE_LOGS_PATH=/mosquitto/data/logs
 # Allow mounting certificate files by volume
 VOLUME [ "/etc/tedge/device-certs" ]
 
+EXPOSE 1883
+EXPOSE 8000
+EXPOSE 8001
+
 USER "tedge"
 # Allow users to re-use the container for one-off commands
 # to ensure the thin-edge.io version remains the same
