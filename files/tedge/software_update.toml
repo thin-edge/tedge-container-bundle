@@ -6,8 +6,6 @@ on_success = "executing"
 
 [executing]
 action = "proceed"
-# FIXIME: Skip check for now
-# on_success = "container_self_update"
 on_success = "check"
 
 [check]
@@ -21,7 +19,6 @@ on_exit._ = "failed"
 operation = "self_update"
 input.image = "${.payload.image}"
 input.containerName = "${.payload.containerName}"
-#input_script = "self_update.sh operation_parameters --image ${.payload.image} --container-name ${.payload.containerName}"
 on_exec = "await-self-update"
 
 [await-self-update]
