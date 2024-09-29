@@ -39,12 +39,9 @@ Self update should only update if there is a new image
 Self update using software update operation
     ${operation}=    Cumulocity.Install Software
     ...    {"name": "tedge", "version": "tedge-container-bundle-tedge-next", "softwareType": "self"}
-    Cumulocity.Operation Should Be SUCCESSFUL    ${operation}
 
-    # TODO: Check the status of the operation
-    ${operation}=    Cumulocity.Execute Shell Command
-    ...    cat /mosquitto/data/logs/agent/workflow-software*.log | tail -50 || true
-    ${operation}=    Cumulocity.Operation Should Be SUCCESSFUL    ${operation}
+    Cumulocity.Operation Should Be SUCCESSFUL    ${operation}
+    [Teardown]    Collect Log Files
 
 
 *** Keywords ***
@@ -52,3 +49,9 @@ Clear Local Operation
     [Arguments]    ${topic}
     ${operation}=    Cumulocity.Execute Shell Command    tedge mqtt pub -r ${topic} ''
     ${operation}=    Cumulocity.Operation Should Be DONE    ${operation}
+
+Collect Log Files
+    ${operation}=    Cumulocity.Execute Shell Command
+    ...    cat /mosquitto/data/logs/agent/workflow-software*.log | tail -50 || true
+    ${operation}=    Cumulocity.Operation Should Be SUCCESSFUL    ${operation}
+    Log    ${operation["c8y_Command"]["result"]}
