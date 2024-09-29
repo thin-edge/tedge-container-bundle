@@ -351,7 +351,9 @@ collect_update_logs() {
         fi
 
         log "Collecting updater container logs. name=$UPDATER_CONTAINER_NAME"
+        log "----- Start of updater logs -----"
         $DOCKER_CMD logs "$UPDATER_CONTAINER_NAME" >&2 ||:
+        log "----- End of updater logs -----"
     else
         log "Updater container does not exist so no logs to collect. name=$UPDATER_CONTAINER_NAME"
     fi
