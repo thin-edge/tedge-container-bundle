@@ -258,7 +258,7 @@ healthcheck() {
             break
         fi
         ATTEMPT=$((ATTEMPT+1))
-        sleep 1
+        sleep 10
     done
 
     return "$TIMED_OUT"
