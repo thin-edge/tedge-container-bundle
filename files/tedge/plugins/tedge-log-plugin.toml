@@ -1,4 +1,7 @@
 files = [
     { type = "software-management", path = "/data/tedge/logs/agent/workflow-software*" },
     { type = "shell", path = "/data/tedge/logs/agent/c8y_Command-*" },
+
+    # Note: Custom log handler, log_upload_container and the path is ignored
+    { type = "container", path = "/tmp/container" },
 ]

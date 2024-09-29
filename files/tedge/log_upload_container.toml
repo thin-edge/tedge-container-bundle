@@ -1,0 +1,19 @@
+operation = "log_upload_container"
+
+[init]
+action = "proceed"
+on_success = "executing"
+
+[executing]
+action = "proceed"
+on_success = "process"
+
+[process]
+script = "container-logs.sh --type ${.payload.type} -n ${.payload.lines} --since ${.payload.dateFrom} --until ${.payload.dateTo} --container ${.payload.searchText} --url ${.payload.tedgeUrl}"
+on_success = "successful"
+
+[successful]
+action = "cleanup"
+
+[failed]
+action = "cleanup"

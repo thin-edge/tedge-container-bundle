@@ -77,6 +77,10 @@ COPY files/tedge/software_update.toml /etc/tedge/operations/
 COPY files/tedge/self_update.toml /etc/tedge/operations/
 COPY files/tedge/self_update.sh /usr/bin/
 COPY files/tedge/container_run.tpl /usr/share/tedge/
+# Container log_upload customer handler
+COPY files/tedge/container-logs.sh /usr/bin/
+COPY files/tedge/log_upload.toml /etc/tedge/operations/
+COPY files/tedge/log_upload_container.toml /etc/tedge/operations/
 
 
 ENV S6_BEHAVIOUR_IF_STAGE2_FAILS=2
