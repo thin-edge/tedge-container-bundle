@@ -279,6 +279,13 @@ rollback() {
     $DOCKER_CMD container rename "$BACKUP_CONTAINER_NAME" "$CONTAINER_NAME"
     $DOCKER_CMD container update "$CONTAINER_NAME" --restart always
     $DOCKER_CMD start "$CONTAINER_NAME" ||:
+
+    log "Performing a healthcheck on the restored container (for information purposes only)"
+    if healthcheck; then
+        log "Rollback was successful and the container is functioning"
+    else
+        log "Rollback was successful but container healthcheck failed, though this could fail if the cloud connectivity is down"
+    fi
 }
 
 publish_message() {
