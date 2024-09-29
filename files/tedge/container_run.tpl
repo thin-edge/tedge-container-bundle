@@ -92,20 +92,8 @@
         {{- range $l, $v := .Labels}}
   --label {{printf "%q" $l}}={{printf "%q" $v}} \
         {{- end}}
-    {{- if .AttachStdin}}
-  --attach stdin \
-    {{- end}}
-    {{- if .AttachStdout}}
-  --attach stdout \
-    {{- end}}
-    {{- if .AttachStderr}}
-  --attach stderr \
-    {{- end}}
     {{- if .Tty}}
   --tty \
-    {{- end}}
-    {{- if .OpenStdin}}
-  --interactive \
     {{- end}}
     {{- if .Entrypoint}}
 {{- /* Since the entry point cannot be overridden from the command line with an array of size over 1,
