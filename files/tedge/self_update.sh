@@ -18,12 +18,17 @@ Trigger a self update of a container with a given container name
 EOT
 }
 
+SCRIPT_DIR=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)
+
 IMAGE="${IMAGE:-}"
 
 CONTAINER_NAME="${CONTAINER_NAME:-tedge}"
 CURRENT_IMAGE_ID=
 TARGET_IMAGE_ID=
 FORCE=0
+
+# golang template to set container run options (from an existing container)
+RUN_TEMPLATE_FILE=${RUN_TEMPLATE_FILE:-/usr/share/tedge/container_run.tpl}
 
 # Internal
 CURRENT_CONTAINER_ID=
@@ -114,36 +119,60 @@ wait_for_stop() {
     return "$FAILED"
 }
 
-generate_run_flags_from_container() {
-    CONTAINER_SPEC=$($DOCKER_CMD inspect "$1")
+read_container_run_template() {
+    #
+    # Read the contents of the first docker run template file found
+    # Return an error if no file is found
+    #
+    for template_file in "$@"; do
+        if [ -f "$template_file" ]; then
+            cat "$template_file"
+            return
+        fi
+    done
 
-    FLAGS_NETWORK_MODE=$(echo "$CONTAINER_SPEC" | jq -r '"--network \"" + .[0].HostConfig.NetworkMode + "\""')
-    FLAGS_DNS=$(echo "$CONTAINER_SPEC" | jq -r '[.[0].HostConfig.Dns[] | "--dns \"" + . + "\""] | join(" ")')
-    FLAGS_EXTRA_HOSTS=$(echo "$CONTAINER_SPEC" | jq -r '[.[0].HostConfig.ExtraHosts // [] | .[] | "--add-host " + .] | join(" ")')
-
-    # TODO: This only supports simple mounts and ignores the options
-    FLAGS_HOST_BINDS=$(echo "$CONTAINER_SPEC" | jq -r '[.[0].Mounts[] | select(.Type == "bind") | "-v \"" + .Source + ":" + .Destination + ":" + .Mode + "\""] | join(" ")')
-    FLAGS_MOUNTS=$(echo "$CONTAINER_SPEC" | jq -r '[.[0].Mounts[] | select(.Type == "volume") | "-v \"" + .Name + ":" + .Destination + "\""] | join(" ")')
-    FLAGS_TMPFS=$(echo "$CONTAINER_SPEC" | jq -r '[.[0].HostConfig.Tmpfs // {} | to_entries | .[] | "--tmpfs \"" + .key + "\""] | join(" ")')
-    
-    FLAGS_ENV=$(echo "$CONTAINER_SPEC" | jq -r '[.[0].Config.Env[] | "-e \"" + . + "\""] | join(" ")')
-
-    FLAGS_PORT_BINDINGS=$(docker inspect tedge | jq -r '[.[0].HostConfig.PortBindings | to_entries[] | .key as $port | .value[] | "-p " + (if .HostIp != "" then .HostIp + ":" + .HostPort + ":" + $port else .HostPort + ":" + $port end) ] | flatten | join(" ")')
-
-    # Allow users to also edit which options they would like to run with
-    CONTAINER_RUN_OPTIONS=${CONTAINER_RUN_OPTIONS:-}
-
-    echo "$FLAGS_NETWORK_MODE $FLAGS_DNS $FLAGS_EXTRA_HOSTS $FLAGS_PORT_BINDINGS $FLAGS_TMPFS $FLAGS_HOST_BINDS $FLAGS_MOUNTS $FLAGS_ENV $CONTAINER_RUN_OPTIONS"
+    log "Could not find a container run template"
+    return 1
 }
 
 generate_run_command_from_container() {
-    CONTAINER_SPEC="$1"
-    name="$2"
-    image="$3"
+    #
+    # Generate a docker run script based on an existing container
+    # so a new container with a new image can be launched in a similar way
+    #
+    container_spec="$1"
+    image="$2"
 
-    RUN_OPTIONS=$(generate_run_flags_from_container "$CONTAINER_SPEC")
-    RUN_COMMAND="$DOCKER_CMD run -d --name \"$name\" $RUN_OPTIONS $image"
-    echo "$RUN_COMMAND"
+    # Use first existing tmeplate
+    # Include looking for template locally to make it easier to run locally during development
+    RUN_TEMPLATE=$(
+        read_container_run_template \
+            "$RUN_TEMPLATE_FILE" \
+            "$SCRIPT_DIR/container_run.tpl"
+    )
+
+    RUN_OPTIONS=$($DOCKER_CMD inspect "$container_spec" --format "$RUN_TEMPLATE")
+    RUN_SCRIPT_CONTENTS=$(
+        cat <<EOT
+#!/bin/sh
+set -e
+$DOCKER_CMD run -d \\$RUN_OPTIONS
+  $image
+EOT
+    )
+    
+    # Note: Remove some options as these should be controlled by the container image itself,
+    # and not be copied when spawning a new container (as they come from the container itself)
+    # It is difficult to check which options are coming from defaults in the container
+    # and what came from the user as docker does not differentiate between the two after the container is created
+    TMP_RUN_SCRIPT="$(mktemp)"
+    echo "$RUN_SCRIPT_CONTENTS" \
+    | sed '/--label "org.opencontainers.image/d' \
+    | sed '/--env "S6_/d' \
+    | sed '/--env "PATH=/d' \
+    > "$TMP_RUN_SCRIPT"
+    chmod +x "$TMP_RUN_SCRIPT"
+    echo "$TMP_RUN_SCRIPT"
 }
 
 update() {
@@ -162,11 +191,14 @@ update() {
     $DOCKER_CMD rm "${CONTAINER_NAME}-bak" ||:
     $DOCKER_CMD container rename "$CURRENT_CONTAINER_ID" "${CONTAINER_NAME}-bak"
 
-    log "Starting the tedge container. name=$CONTAINER_NAME"
-    RUN_COMMAND=$(generate_run_command_from_container "$CURRENT_CONTAINER_ID" "$CONTAINER_NAME" "$IMAGE")
+    RUN_SCRIPT=$(generate_run_command_from_container "$CURRENT_CONTAINER_ID" "$IMAGE")
+    log "Starting the tedge container. name=$CONTAINER_NAME, run_script=$RUN_SCRIPT"
     NEXT_CONTAINER_ID=$(
-        eval "$RUN_COMMAND"
+        "$RUN_SCRIPT"
     )
+
+    log "Removing temporary container run script: $RUN_SCRIPT"
+    rm -f "$RUN_SCRIPT"
 }
 
 is_functional() {
@@ -433,8 +465,9 @@ case "$ACTION" in
         echo "" >&2
         echo "The following command is used to spawn a new container (copying from an already running container)" >&2
         echo "" >&2
-        RUN_COMMAND=$(generate_run_command_from_container "$CONTAINER_NAME" "$CONTAINER_NAME" "${IMAGE:-tedge}")
-        echo "$RUN_COMMAND"
+        RUN_SCRIPT=$(generate_run_command_from_container "$CONTAINER_NAME" "${IMAGE:-tedge}")
+        cat "$RUN_SCRIPT"
+        rm -f "$RUN_SCRIPT"
         ;;
     update)
         prepare
