@@ -275,6 +275,11 @@ rollback() {
 
     log "Stopping unhealthy container. name=$CONTAINER_NAME"
     $DOCKER_CMD stop "$CONTAINER_NAME" ||:
+
+    log "Collecting logs from the unhealthy container. name=$CONTAINER_NAME"
+    log "----- Start of unhealthy container logs -----"
+    $DOCKER_CMD logs "$CONTAINER_NAME" -n 500 >&2 ||:
+    log "----- End of unhealthy container logs -----"
     $DOCKER_CMD rm "$CONTAINER_NAME" ||:
 
     log "Restoring container from backup. name=$BACKUP_CONTAINER_NAME (new name will be $CONTAINER_NAME)"
