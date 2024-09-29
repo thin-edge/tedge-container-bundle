@@ -43,6 +43,10 @@ Install application using docker compose
     ...    {"name": "nodered-instance1", "version": "1.0.0", "softwareType": "container-group"}
 
 
+Get Container Logs
+    ${operation}=    Cumulocity.Get Log File    container    search_text=tedge    maximum_lines=100
+    Cumulocity.Operation Should Be SUCCESSFUL    ${operation}
+
 *** Keywords ***
 Get Configuration File
     [Arguments]    ${typename}

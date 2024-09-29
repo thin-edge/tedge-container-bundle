@@ -1,0 +1,44 @@
+operation = "log_upload"
+
+[init]
+action = "proceed"
+on_success = "executing"
+
+[executing]
+action = "proceed"
+on_success = "check"
+
+[check]
+script = "sh -c '[ ${.payload.type} = container ] && exit 0 || exit 1'"
+on_exit.0 = "custom_log_handler"
+on_exit.1 = "process"
+on_exit._ = "failed"
+
+[custom_log_handler]
+# Optional step where a self-update is performed
+operation = "log_upload_${.payload.type}"
+input.type = "${.payload.type}"
+input.lines = "${.payload.lines}"
+input.dateFrom = "${.payload.dateFrom}"
+input.dateTo = "${.payload.dateTo}"
+input.searchText = "${.payload.searchText}"
+input.tedgeUrl = "${.payload.tedgeUrl}"
+on_exec = "await-log-handler"
+
+[await-log-handler]
+action = "await-operation-completion"
+on_success = "successful"
+
+[process]
+operation = "builtin:log_upload"
+on_exec = "wait-for-builtin-log-handler"
+
+[wait-for-builtin-log-handler]
+action = "await-operation-completion"
+on_success = "successful"
+
+[successful]
+action = "cleanup"
+
+[failed]
+action = "cleanup"
