@@ -34,7 +34,7 @@ services:
       - /tmp
     volumes:
       - device-certs:/etc/tedge/device-certs
-      - mosquitto:/mosquitto/data
+      - tedge:/data/tedge
       - /var/run/docker.sock:/var/run/docker.sock:rw
     profiles:
       - service
@@ -44,8 +44,8 @@ services:
 volumes:
   device-certs:
     name: device-certs
-  mosquitto:
-    name: mosquitto
+  tedge:
+    name: tedge
 
 networks:
   tedge:

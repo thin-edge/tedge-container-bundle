@@ -42,7 +42,7 @@ run-local: build-local
         --network tedge \
         --tmpfs /tmp \
         -v "device-certs:/etc/tedge/device-certs" \
-        -v "mosquitto:/mosquitto/data" \
+        -v "tedge:/data/tedge" \
         -v /var/run/docker.sock:/var/run/docker.sock:rw \
         -e "TEDGE_C8Y_URL=$TEDGE_C8Y_URL" \
         tedge-container-bundle-tedge
