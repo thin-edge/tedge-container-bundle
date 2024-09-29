@@ -4,6 +4,7 @@ ARG TEDGE_IMAGE=tedge
 FROM ghcr.io/thin-edge/${TEDGE_IMAGE}:${TEDGE_TAG}
 ARG TARGETPLATFORM
 ARG S6_OVERLAY_VERSION=3.2.0.0
+ARG DATA_DIR=/data/tedge
 
 USER root
 
@@ -59,9 +60,10 @@ RUN chown -R tedge:tedge /etc/tedge \
 COPY cont-init.d/*  /etc/cont-init.d/
 
 # mosquitto configuration
-RUN mkdir -p /mosquitto/data/ \
-    && chown -R tedge:tedge /mosquitto/data/
 COPY files/mosquitto/mosquitto.conf /etc/mosquitto/mosquitto.conf
+RUN mkdir -p "$DATA_DIR" \
+    && chown -R tedge:tedge "$DATA_DIR" \
+    && sed -i "s|persistence_location .*|persistence_location $DATA_DIR/|g" /etc/mosquitto/mosquitto.conf
 
 # Add custom thin-edge.io configuration (e.g. plugin config)
 COPY files/tedge/tedge.toml /etc/tedge/
@@ -105,11 +107,12 @@ ENV TEDGE_HTTP_CLIENT_HOST=127.0.0.1
 ENV TEDGE_C8Y_PROXY_CLIENT_HOST=127.0.0.1
 # Store the agent information in the persistent data
 # but don't share too much data as it can be destructive
-ENV TEDGE_AGENT_STATE_PATH=/mosquitto/data/agent
-ENV TEDGE_LOGS_PATH=/mosquitto/data/logs
+ENV TEDGE_AGENT_STATE_PATH="$DATA_DIR/agent"
+ENV TEDGE_LOGS_PATH="$DATA_DIR/logs"
 
 # Allow mounting certificate files by volume
 VOLUME [ "/etc/tedge/device-certs" ]
+VOLUME [ "$DATA_DIR" ]
 
 EXPOSE 1883
 EXPOSE 8000

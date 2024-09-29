@@ -19,7 +19,7 @@ Trigger self update via local command
 
     # TODO: Check the status of the operation
     ${operation}=    Cumulocity.Execute Shell Command
-    ...    cat /mosquitto/data/logs/agent/workflow-self_update-local-*.log ${topic} | tail -n50 || true
+    ...    cat /data/tedge/logs/agent/workflow-self_update-local-*.log ${topic} | tail -n50 || true
 
     ${operation}=    Cumulocity.Operation Should Be SUCCESSFUL    ${operation}
 
@@ -58,6 +58,6 @@ Clear Local Operation
 
 Collect Log Files
     ${operation}=    Cumulocity.Execute Shell Command
-    ...    find /mosquitto/data/logs/agent/ -type f -name "workflow-software_update*.log" -exec ls -t1 {} + | head -1 | xargs tail -c 15000
+    ...    find /data/tedge/logs/agent/ -type f -name "workflow-software_update*.log" -exec ls -t1 {} + | head -1 | xargs tail -c 15000
     ${operation}=    Cumulocity.Operation Should Be SUCCESSFUL    ${operation}
     Log    ${operation["c8y_Command"]["result"]}
