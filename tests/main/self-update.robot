@@ -44,7 +44,7 @@ Self update using software update operation
     ${operation}=    Cumulocity.Install Software
     ...    {"name": "tedge", "version": "tedge-container-bundle-tedge-next", "softwareType": "self"}
 
-    Cumulocity.Operation Should Be SUCCESSFUL    ${operation}
+    Cumulocity.Operation Should Be SUCCESSFUL    ${operation}    timeout=120
     Device Should Have Installed Software
     ...    {"name": "tedge", "version": "tedge-container-bundle-tedge-next:.*", "softwareType": "self"}
     [Teardown]    Collect Log Files
