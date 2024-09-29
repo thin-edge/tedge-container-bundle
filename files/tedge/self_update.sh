@@ -108,9 +108,10 @@ is_container_running() {
 }
 
 wait_for_stop() {
+    container_id="$1"
     attempt=1
     while [ "$attempt" -le 90 ]; do
-        if ! is_container_running "$CURRENT_CONTAINER_ID"; then
+        if ! is_container_running "$container_id"; then
             return "$OK"
         fi
         attempt=$((attempt+1))
@@ -176,10 +177,10 @@ EOT
 }
 
 update() {
-    log "Removing existing container. name=$CONTAINER_NAME, id=$CURRENT_CONTAINER_ID"
+    log "Waiting for existing container to shutdown. name=$CONTAINER_NAME, id=$CURRENT_CONTAINER_ID"
 
     # Wait for the container to stop (this is the hand-off)
-    if ! wait_for_stop; then
+    if ! wait_for_stop "$CURRENT_CONTAINER_ID"; then
         log "Container was not shutdown. Aborting update"
         exit "$FAILED"
     fi
@@ -187,12 +188,19 @@ update() {
     # Make sure the container is stopped and not in the process of restarting
     $DOCKER_CMD stop --time 90 "$CURRENT_CONTAINER_ID" ||:
 
-    # remove any existing backup-name
-    $DOCKER_CMD rm "${CONTAINER_NAME}-bak" ||:
-    $DOCKER_CMD container rename "$CURRENT_CONTAINER_ID" "${CONTAINER_NAME}-bak"
-
+    # Generate run container before the container is renamed so the name is preserved
     RUN_SCRIPT=$(generate_run_command_from_container "$CURRENT_CONTAINER_ID" "$IMAGE")
+
+    # remove any existing backup-name
+    if $DOCKER_CMD inspect "$BACKUP_CONTAINER_NAME" >/dev/null 2>&1; then
+        $DOCKER_CMD stop "$BACKUP_CONTAINER_NAME" >/dev/null ||:
+        $DOCKER_CMD rm "$BACKUP_CONTAINER_NAME" >/dev/null ||:
+    fi
+    log "Renaming existing container. old=${CONTAINER_NAME}, new=$BACKUP_CONTAINER_NAME"
+    $DOCKER_CMD container rename "$CURRENT_CONTAINER_ID" "$BACKUP_CONTAINER_NAME"
+
     log "Starting the tedge container. name=$CONTAINER_NAME, run_script=$RUN_SCRIPT"
+    log "Run script: $(cat "$RUN_SCRIPT")"
     NEXT_CONTAINER_ID=$(
         "$RUN_SCRIPT"
     )
@@ -293,16 +301,20 @@ update_background() {
     fi
     # shellcheck disable=SC2086
     set -- $OPTIONS
-    # TODO: Remove --rm option, and use a predictable name so that logs can be collected
-    # to help debug a failed update
+
+    if $DOCKER_CMD inspect "$UPDATER_CONTAINER_NAME" >/dev/null 2>&1; then
+        log "Removing old updater container. name=$UPDATER_CONTAINER_NAME"
+        $DOCKER_CMD stop "$UPDATER_CONTAINER_NAME" 2>/dev/null ||:
+        $DOCKER_CMD rm "$UPDATER_CONTAINER_NAME" 2>/dev/null ||:
+    fi
     UPDATER_CONTAINER_ID=$(
         $DOCKER_CMD run -d \
-            --rm \
+            --name "$UPDATER_CONTAINER_NAME" \
             -v /var/run/docker.sock:/var/run/docker.sock:rw \
             "$IMAGE" \
             "$0" update --image "$IMAGE" --container-name "$CONTAINER_NAME" --container-id "$CURRENT_CONTAINER_ID" "$@"
     )
-    log "Update container id: $UPDATER_CONTAINER_ID"
+    log "Updater container. id=$UPDATER_CONTAINER_ID, name=$UPDATER_CONTAINER_NAME"
 
     # Set the container to restart (but only after the background service was launched successfully)
     log "Setting restart policy to no for existing container"
@@ -318,6 +330,22 @@ update_background() {
 
     # Give some time for the message to be published
     sleep 5
+}
+
+collect_update_logs() {
+    # Collect updater container logs
+    if $DOCKER_CMD inspect "$UPDATER_CONTAINER_NAME" >/dev/null 2>&1; then
+
+        log "Waiting for updater container to stop (if it is running). name=$UPDATER_CONTAINER_NAME"
+        if ! wait_for_stop "$UPDATER_CONTAINER_NAME"; then
+            log "Updater container is still running. Collecting logs anyway"
+        fi
+
+        log "Collecting updater container logs. name=$UPDATER_CONTAINER_NAME"
+        $DOCKER_CMD logs "$UPDATER_CONTAINER_NAME" >&2 ||:
+    else
+        log "Updater container does not exist so no logs to collect. name=$UPDATER_CONTAINER_NAME"
+    fi
 }
 
 #
@@ -359,6 +387,10 @@ while [ $# -gt 0 ]; do
     esac
     shift
 done
+
+# Set container names which are derived from the container name
+BACKUP_CONTAINER_NAME="${CONTAINER_NAME}-bak"
+UPDATER_CONTAINER_NAME="${CONTAINER_NAME}-updater"
 
 #
 # Main
@@ -435,9 +467,8 @@ case "$ACTION" in
         exit "$FAILED"
         ;;
     verify)
-        # TODO: Collect logs from the updater container and then delete it
-        # to enable easier debugging
         prepare
+        collect_update_logs
         if needs_update; then
             # Update is still not up to date
             exit "$FAILED"

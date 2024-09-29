@@ -74,9 +74,6 @@
         {{- range $n, $conf := .Networks}}
             {{- with $conf}}
   --network {{printf "%q" $n}} \
-                {{- range $a := $conf.Aliases}}
-  --network-alias {{printf "%q" $a}} \
-                {{- end}}
             {{- end}}
         {{- end}}
     {{- end}}

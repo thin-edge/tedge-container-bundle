@@ -13,13 +13,13 @@ action = "proceed"
 on_success = "needs_update"
 
 [needs_update]
-script = "self_update.sh needs_update --image ${.payload.image}"
+script = "self_update.sh needs_update --image ${.payload.image} --container-name ${.payload.containerName}"
 on_exit.0 = "update"
 on_exit.1 = "successful"
 on_exit._ = "failed"
 
 [update]
-script = "self_update.sh update_background --image ${.payload.image}"
+script = "self_update.sh update_background --image ${.payload.image} --container-name ${.payload.containerName}"
 on_success = "restart"
 on_error = "failed"
 
@@ -36,7 +36,7 @@ action = "await-operation-completion"
 on_success = "verify"
 
 [verify]
-script = "self_update.sh verify --image ${.payload.image}"
+script = "self_update.sh verify --image ${.payload.image} --container-name ${.payload.containerName}"
 on_success = "successful"
 on_error = "failed"
 
