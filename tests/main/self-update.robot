@@ -37,14 +37,17 @@ Self update should only update if there is a new image
     # Cumulocity.Device Should Have Event/s    type=tedge_self_update    after=${date}    minimum=0    maximum=0
 
 Self update using software update operation
+    # pre-condition
+    Device Should Have Installed Software
+    ...    {"name": "tedge", "version": "tedge-container-bundle-tedge:.*", "softwareType": "self"}    timeout=10
+
     ${operation}=    Cumulocity.Install Software
     ...    {"name": "tedge", "version": "tedge-container-bundle-tedge-next", "softwareType": "self"}
-    Cumulocity.Operation Should Be SUCCESSFUL    ${operation}
 
-    # TODO: Check the status of the operation
-    ${operation}=    Cumulocity.Execute Shell Command
-    ...    cat /mosquitto/data/logs/agent/workflow-software*.log | tail -50 || true
-    ${operation}=    Cumulocity.Operation Should Be SUCCESSFUL    ${operation}
+    Cumulocity.Operation Should Be SUCCESSFUL    ${operation}    timeout=120
+    Device Should Have Installed Software
+    ...    {"name": "tedge", "version": "tedge-container-bundle-tedge-next:.*", "softwareType": "self"}
+    [Teardown]    Collect Log Files
 
 
 *** Keywords ***
@@ -52,3 +55,9 @@ Clear Local Operation
     [Arguments]    ${topic}
     ${operation}=    Cumulocity.Execute Shell Command    tedge mqtt pub -r ${topic} ''
     ${operation}=    Cumulocity.Operation Should Be DONE    ${operation}
+
+Collect Log Files
+    ${operation}=    Cumulocity.Execute Shell Command
+    ...    find /mosquitto/data/logs/agent/ -type f -name "workflow-software_update*.log" -exec ls -t1 {} + | head -1 | xargs tail -c 15000
+    ${operation}=    Cumulocity.Operation Should Be SUCCESSFUL    ${operation}
+    Log    ${operation["c8y_Command"]["result"]}

@@ -18,12 +18,17 @@ Trigger a self update of a container with a given container name
 EOT
 }
 
+SCRIPT_DIR=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)
+
 IMAGE="${IMAGE:-}"
 
 CONTAINER_NAME="${CONTAINER_NAME:-tedge}"
 CURRENT_IMAGE_ID=
 TARGET_IMAGE_ID=
 FORCE=0
+
+# golang template to set container run options (from an existing container)
+RUN_TEMPLATE_FILE=${RUN_TEMPLATE_FILE:-/usr/share/tedge/container_run.tpl}
 
 # Internal
 CURRENT_CONTAINER_ID=
@@ -103,9 +108,10 @@ is_container_running() {
 }
 
 wait_for_stop() {
+    container_id="$1"
     attempt=1
     while [ "$attempt" -le 90 ]; do
-        if ! is_container_running "$CURRENT_CONTAINER_ID"; then
+        if ! is_container_running "$container_id"; then
             return "$OK"
         fi
         attempt=$((attempt+1))
@@ -114,43 +120,67 @@ wait_for_stop() {
     return "$FAILED"
 }
 
-generate_run_flags_from_container() {
-    CONTAINER_SPEC=$($DOCKER_CMD inspect "$1")
+read_container_run_template() {
+    #
+    # Read the contents of the first docker run template file found
+    # Return an error if no file is found
+    #
+    for template_file in "$@"; do
+        if [ -f "$template_file" ]; then
+            cat "$template_file"
+            return
+        fi
+    done
 
-    FLAGS_NETWORK_MODE=$(echo "$CONTAINER_SPEC" | jq -r '"--network \"" + .[0].HostConfig.NetworkMode + "\""')
-    FLAGS_DNS=$(echo "$CONTAINER_SPEC" | jq -r '[.[0].HostConfig.Dns[] | "--dns \"" + . + "\""] | join(" ")')
-    FLAGS_EXTRA_HOSTS=$(echo "$CONTAINER_SPEC" | jq -r '[.[0].HostConfig.ExtraHosts // [] | .[] | "--add-host " + .] | join(" ")')
-
-    # TODO: This only supports simple mounts and ignores the options
-    FLAGS_HOST_BINDS=$(echo "$CONTAINER_SPEC" | jq -r '[.[0].Mounts[] | select(.Type == "bind") | "-v \"" + .Source + ":" + .Destination + ":" + .Mode + "\""] | join(" ")')
-    FLAGS_MOUNTS=$(echo "$CONTAINER_SPEC" | jq -r '[.[0].Mounts[] | select(.Type == "volume") | "-v \"" + .Name + ":" + .Destination + "\""] | join(" ")')
-    FLAGS_TMPFS=$(echo "$CONTAINER_SPEC" | jq -r '[.[0].HostConfig.Tmpfs // {} | to_entries | .[] | "--tmpfs \"" + .key + "\""] | join(" ")')
-    
-    FLAGS_ENV=$(echo "$CONTAINER_SPEC" | jq -r '[.[0].Config.Env[] | "-e \"" + . + "\""] | join(" ")')
-
-    FLAGS_PORT_BINDINGS=$(docker inspect tedge | jq -r '[.[0].HostConfig.PortBindings | to_entries[] | .key as $port | .value[] | "-p " + (if .HostIp != "" then .HostIp + ":" + .HostPort + ":" + $port else .HostPort + ":" + $port end) ] | flatten | join(" ")')
-
-    # Allow users to also edit which options they would like to run with
-    CONTAINER_RUN_OPTIONS=${CONTAINER_RUN_OPTIONS:-}
-
-    echo "$FLAGS_NETWORK_MODE $FLAGS_DNS $FLAGS_EXTRA_HOSTS $FLAGS_PORT_BINDINGS $FLAGS_TMPFS $FLAGS_HOST_BINDS $FLAGS_MOUNTS $FLAGS_ENV $CONTAINER_RUN_OPTIONS"
+    log "Could not find a container run template"
+    return 1
 }
 
 generate_run_command_from_container() {
-    CONTAINER_SPEC="$1"
-    name="$2"
-    image="$3"
+    #
+    # Generate a docker run script based on an existing container
+    # so a new container with a new image can be launched in a similar way
+    #
+    container_spec="$1"
+    image="$2"
 
-    RUN_OPTIONS=$(generate_run_flags_from_container "$CONTAINER_SPEC")
-    RUN_COMMAND="$DOCKER_CMD run -d --name \"$name\" $RUN_OPTIONS $image"
-    echo "$RUN_COMMAND"
+    # Use first existing tmeplate
+    # Include looking for template locally to make it easier to run locally during development
+    RUN_TEMPLATE=$(
+        read_container_run_template \
+            "$RUN_TEMPLATE_FILE" \
+            "$SCRIPT_DIR/container_run.tpl"
+    )
+
+    RUN_OPTIONS=$($DOCKER_CMD inspect "$container_spec" --format "$RUN_TEMPLATE")
+    RUN_SCRIPT_CONTENTS=$(
+        cat <<EOT
+#!/bin/sh
+set -e
+$DOCKER_CMD run -d \\$RUN_OPTIONS
+  $image
+EOT
+    )
+    
+    # Note: Remove some options as these should be controlled by the container image itself,
+    # and not be copied when spawning a new container (as they come from the container itself)
+    # It is difficult to check which options are coming from defaults in the container
+    # and what came from the user as docker does not differentiate between the two after the container is created
+    TMP_RUN_SCRIPT="$(mktemp)"
+    echo "$RUN_SCRIPT_CONTENTS" \
+    | sed '/--label "org.opencontainers.image/d' \
+    | sed '/--env "S6_/d' \
+    | sed '/--env "PATH=/d' \
+    > "$TMP_RUN_SCRIPT"
+    chmod +x "$TMP_RUN_SCRIPT"
+    echo "$TMP_RUN_SCRIPT"
 }
 
 update() {
-    log "Removing existing container. name=$CONTAINER_NAME, id=$CURRENT_CONTAINER_ID"
+    log "Waiting for existing container to shutdown. name=$CONTAINER_NAME, id=$CURRENT_CONTAINER_ID"
 
     # Wait for the container to stop (this is the hand-off)
-    if ! wait_for_stop; then
+    if ! wait_for_stop "$CURRENT_CONTAINER_ID"; then
         log "Container was not shutdown. Aborting update"
         exit "$FAILED"
     fi
@@ -158,51 +188,63 @@ update() {
     # Make sure the container is stopped and not in the process of restarting
     $DOCKER_CMD stop --time 90 "$CURRENT_CONTAINER_ID" ||:
 
-    # remove any existing backup-name
-    $DOCKER_CMD rm "${CONTAINER_NAME}-bak" ||:
-    $DOCKER_CMD container rename "$CURRENT_CONTAINER_ID" "${CONTAINER_NAME}-bak"
+    # Generate run container before the container is renamed so the name is preserved
+    RUN_SCRIPT=$(generate_run_command_from_container "$CURRENT_CONTAINER_ID" "$IMAGE")
 
-    log "Starting the tedge container. name=$CONTAINER_NAME"
-    RUN_COMMAND=$(generate_run_command_from_container "$CURRENT_CONTAINER_ID" "$CONTAINER_NAME" "$IMAGE")
+    # remove any existing backup-name
+    if $DOCKER_CMD inspect "$BACKUP_CONTAINER_NAME" >/dev/null 2>&1; then
+        $DOCKER_CMD stop "$BACKUP_CONTAINER_NAME" >/dev/null ||:
+        $DOCKER_CMD rm "$BACKUP_CONTAINER_NAME" >/dev/null ||:
+    fi
+    log "Renaming existing container. old=${CONTAINER_NAME}, new=$BACKUP_CONTAINER_NAME"
+    $DOCKER_CMD container rename "$CURRENT_CONTAINER_ID" "$BACKUP_CONTAINER_NAME"
+
+    log "Starting the tedge container. name=$CONTAINER_NAME, run_script=$RUN_SCRIPT"
+    log "Run script: $(cat "$RUN_SCRIPT")"
     NEXT_CONTAINER_ID=$(
-        eval "$RUN_COMMAND"
+        "$RUN_SCRIPT"
     )
+
+    log "Removing temporary container run script: $RUN_SCRIPT"
+    rm -f "$RUN_SCRIPT"
 }
 
 is_functional() {
+    container_id="$1"
     # Check container state
-    IS_RUNNING=$($DOCKER_CMD inspect "$NEXT_CONTAINER_ID" --format "{{.State.Running}}" 2>/dev/null ||:)
+    IS_RUNNING=$($DOCKER_CMD inspect "$container_id" --format "{{.State.Running}}" 2>/dev/null ||:)
     if [ "$IS_RUNNING" != true ]; then
         return "$FAILED"
     fi
 
     # Check cloud connectivity
-    if $DOCKER_CMD exec -t "$NEXT_CONTAINER_ID" tedge config get c8y.url; then
-        if ! $DOCKER_CMD exec -t "$NEXT_CONTAINER_ID" tedge connect c8y --test; then
+    if $DOCKER_CMD exec -t "$container_id" tedge config get c8y.url; then
+        if ! $DOCKER_CMD exec -t "$container_id" tedge connect c8y --test; then
             return "$FAILED"
         fi
     fi
 
-    if $DOCKER_CMD exec -t "$NEXT_CONTAINER_ID" tedge config get aws.url; then
-        if ! $DOCKER_CMD exec -t "$NEXT_CONTAINER_ID" tedge connect aws --test; then
+    if $DOCKER_CMD exec -t "$container_id" tedge config get aws.url; then
+        if ! $DOCKER_CMD exec -t "$container_id" tedge connect aws --test; then
             return "$FAILED"
         fi
     fi
 
-    if $DOCKER_CMD exec -t "$NEXT_CONTAINER_ID" tedge config get az.url; then
-        if ! $DOCKER_CMD exec -t "$NEXT_CONTAINER_ID" tedge connect az --test; then
+    if $DOCKER_CMD exec -t "$container_id" tedge config get az.url; then
+        if ! $DOCKER_CMD exec -t "$container_id" tedge connect az --test; then
             return "$FAILED"
         fi
     fi
 
-    CONTAINER_IMAGE=$($DOCKER_CMD inspect "$NEXT_CONTAINER_ID" --format "{{.Image}}")
+    CONTAINER_IMAGE=$($DOCKER_CMD inspect "$container_id" --format "{{.Image}}")
     log "New image: $CONTAINER_IMAGE"
 
     return "$OK"
 }
 
 healthcheck() {
-    log "Checking new container's health"
+    container_id="$1"
+    log "Checking new container's health. id=$container_id"
     sleep 2
     ATTEMPT=1
     TIMED_OUT=0
@@ -211,7 +253,7 @@ healthcheck() {
             TIMED_OUT=1
             break
         fi
-        if is_functional; then
+        if is_functional "$container_id"; then
             log "Container is working"
             break
         fi
@@ -223,13 +265,29 @@ healthcheck() {
 }
 
 rollback() {
-    log "Rolling back"
-    $DOCKER_CMD stop "$NEXT_CONTAINER_ID" ||:
-    $DOCKER_CMD rm "$NEXT_CONTAINER_ID" ||:
+    log "Rolling back container. name=$CONTAINER_NAME (unhealthy)"
 
-    $DOCKER_CMD container rename "$CURRENT_CONTAINER_ID" "${CONTAINER_NAME}"
-    $DOCKER_CMD container update "$CURRENT_CONTAINER_ID" --restart always
-    $DOCKER_CMD start "$CURRENT_CONTAINER_ID" ||:
+    if ! $DOCKER_CMD inspect "$BACKUP_CONTAINER_NAME" >/dev/null 2>&1; then
+        # Don't do anything if the backup does not exist, as a broken container is better then no container!
+        log "ERROR: Could not rollback container as the backup no longer exists! This is unexpected. name=$BACKUP_CONTAINER_NAME"
+        exit 1
+    fi
+
+    log "Stopping unhealthy container. name=$CONTAINER_NAME"
+    $DOCKER_CMD stop "$CONTAINER_NAME" ||:
+    $DOCKER_CMD rm "$CONTAINER_NAME" ||:
+
+    log "Restoring container from backup. name=$BACKUP_CONTAINER_NAME (new name will be $CONTAINER_NAME)"
+    $DOCKER_CMD container rename "$BACKUP_CONTAINER_NAME" "$CONTAINER_NAME"
+    $DOCKER_CMD container update "$CONTAINER_NAME" --restart always
+    $DOCKER_CMD start "$CONTAINER_NAME" ||:
+
+    log "Performing a healthcheck on the restored container (for information purposes only)"
+    if healthcheck "$CONTAINER_NAME"; then
+        log "Rollback was successful and the container is functioning"
+    else
+        log "Rollback was successful but container healthcheck failed, though this could fail if the cloud connectivity is down"
+    fi
 }
 
 publish_message() {
@@ -261,16 +319,20 @@ update_background() {
     fi
     # shellcheck disable=SC2086
     set -- $OPTIONS
-    # TODO: Remove --rm option, and use a predictable name so that logs can be collected
-    # to help debug a failed update
+
+    if $DOCKER_CMD inspect "$UPDATER_CONTAINER_NAME" >/dev/null 2>&1; then
+        log "Removing old updater container. name=$UPDATER_CONTAINER_NAME"
+        $DOCKER_CMD stop "$UPDATER_CONTAINER_NAME" 2>/dev/null ||:
+        $DOCKER_CMD rm "$UPDATER_CONTAINER_NAME" 2>/dev/null ||:
+    fi
     UPDATER_CONTAINER_ID=$(
         $DOCKER_CMD run -d \
-            --rm \
+            --name "$UPDATER_CONTAINER_NAME" \
             -v /var/run/docker.sock:/var/run/docker.sock:rw \
             "$IMAGE" \
             "$0" update --image "$IMAGE" --container-name "$CONTAINER_NAME" --container-id "$CURRENT_CONTAINER_ID" "$@"
     )
-    log "Update container id: $UPDATER_CONTAINER_ID"
+    log "Updater container. id=$UPDATER_CONTAINER_ID, name=$UPDATER_CONTAINER_NAME"
 
     # Set the container to restart (but only after the background service was launched successfully)
     log "Setting restart policy to no for existing container"
@@ -286,6 +348,24 @@ update_background() {
 
     # Give some time for the message to be published
     sleep 5
+}
+
+collect_update_logs() {
+    # Collect updater container logs
+    if $DOCKER_CMD inspect "$UPDATER_CONTAINER_NAME" >/dev/null 2>&1; then
+
+        log "Waiting for updater container to stop (if it is running). name=$UPDATER_CONTAINER_NAME"
+        if ! wait_for_stop "$UPDATER_CONTAINER_NAME"; then
+            log "Updater container is still running. Collecting logs anyway"
+        fi
+
+        log "Collecting updater container logs. name=$UPDATER_CONTAINER_NAME"
+        log "----- Start of updater logs -----"
+        $DOCKER_CMD logs "$UPDATER_CONTAINER_NAME" >&2 ||:
+        log "----- End of updater logs -----"
+    else
+        log "Updater container does not exist so no logs to collect. name=$UPDATER_CONTAINER_NAME"
+    fi
 }
 
 #
@@ -327,6 +407,10 @@ while [ $# -gt 0 ]; do
     esac
     shift
 done
+
+# Set container names which are derived from the container name
+BACKUP_CONTAINER_NAME="${CONTAINER_NAME}-bak"
+UPDATER_CONTAINER_NAME="${CONTAINER_NAME}-updater"
 
 #
 # Main
@@ -403,9 +487,8 @@ case "$ACTION" in
         exit "$FAILED"
         ;;
     verify)
-        # TODO: Collect logs from the updater container and then delete it
-        # to enable easier debugging
         prepare
+        collect_update_logs
         if needs_update; then
             # Update is still not up to date
             exit "$FAILED"
@@ -433,8 +516,9 @@ case "$ACTION" in
         echo "" >&2
         echo "The following command is used to spawn a new container (copying from an already running container)" >&2
         echo "" >&2
-        RUN_COMMAND=$(generate_run_command_from_container "$CONTAINER_NAME" "$CONTAINER_NAME" "${IMAGE:-tedge}")
-        echo "$RUN_COMMAND"
+        RUN_SCRIPT=$(generate_run_command_from_container "$CONTAINER_NAME" "${IMAGE:-tedge}")
+        cat "$RUN_SCRIPT"
+        rm -f "$RUN_SCRIPT"
         ;;
     update)
         prepare
@@ -446,7 +530,7 @@ case "$ACTION" in
             exit "$OK"
         fi
 
-        if ! healthcheck; then
+        if ! healthcheck "$CONTAINER_NAME"; then
             rollback
         fi
         ;;

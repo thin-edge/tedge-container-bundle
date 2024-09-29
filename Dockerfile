@@ -74,6 +74,7 @@ COPY files/tedge/self.sh /etc/tedge/sm-plugins/self
 COPY files/tedge/software_update.toml /etc/tedge/operations/
 COPY files/tedge/self_update.toml /etc/tedge/operations/
 COPY files/tedge/self_update.sh /usr/bin/
+COPY files/tedge/container_run.tpl /usr/share/tedge/
 
 
 ENV S6_BEHAVIOUR_IF_STAGE2_FAILS=2
