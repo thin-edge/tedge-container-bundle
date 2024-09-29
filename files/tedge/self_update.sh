@@ -263,13 +263,22 @@ healthcheck() {
 }
 
 rollback() {
-    log "Rolling back"
-    $DOCKER_CMD stop "$NEXT_CONTAINER_ID" ||:
-    $DOCKER_CMD rm "$NEXT_CONTAINER_ID" ||:
+    log "Rolling back container. name=$CONTAINER_NAME (unhealthy)"
 
-    $DOCKER_CMD container rename "$CURRENT_CONTAINER_ID" "${CONTAINER_NAME}"
-    $DOCKER_CMD container update "$CURRENT_CONTAINER_ID" --restart always
-    $DOCKER_CMD start "$CURRENT_CONTAINER_ID" ||:
+    if ! $DOCKER_CMD inspect "$BACKUP_CONTAINER_NAME" >/dev/null 2>&1; then
+        # Don't do anything if the backup does not exist, as a broken container is better then no container!
+        log "ERROR: Could not rollback container as the backup no longer exists! This is unexpected. name=$BACKUP_CONTAINER_NAME"
+        exit 1
+    fi
+
+    log "Stopping unhealthy container. name=$CONTAINER_NAME"
+    $DOCKER_CMD stop "$CONTAINER_NAME" ||:
+    $DOCKER_CMD rm "$CONTAINER_NAME" ||:
+
+    log "Restoring container from backup. name=$BACKUP_CONTAINER_NAME (new name will be $CONTAINER_NAME)"
+    $DOCKER_CMD container rename "$BACKUP_CONTAINER_NAME" "$CONTAINER_NAME"
+    $DOCKER_CMD container update "$CONTAINER_NAME" --restart always
+    $DOCKER_CMD start "$CONTAINER_NAME" ||:
 }
 
 publish_message() {
