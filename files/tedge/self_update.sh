@@ -210,39 +210,41 @@ update() {
 }
 
 is_functional() {
+    container_id="$1"
     # Check container state
-    IS_RUNNING=$($DOCKER_CMD inspect "$NEXT_CONTAINER_ID" --format "{{.State.Running}}" 2>/dev/null ||:)
+    IS_RUNNING=$($DOCKER_CMD inspect "$container_id" --format "{{.State.Running}}" 2>/dev/null ||:)
     if [ "$IS_RUNNING" != true ]; then
         return "$FAILED"
     fi
 
     # Check cloud connectivity
-    if $DOCKER_CMD exec -t "$NEXT_CONTAINER_ID" tedge config get c8y.url; then
-        if ! $DOCKER_CMD exec -t "$NEXT_CONTAINER_ID" tedge connect c8y --test; then
+    if $DOCKER_CMD exec -t "$container_id" tedge config get c8y.url; then
+        if ! $DOCKER_CMD exec -t "$container_id" tedge connect c8y --test; then
             return "$FAILED"
         fi
     fi
 
-    if $DOCKER_CMD exec -t "$NEXT_CONTAINER_ID" tedge config get aws.url; then
-        if ! $DOCKER_CMD exec -t "$NEXT_CONTAINER_ID" tedge connect aws --test; then
+    if $DOCKER_CMD exec -t "$container_id" tedge config get aws.url; then
+        if ! $DOCKER_CMD exec -t "$container_id" tedge connect aws --test; then
             return "$FAILED"
         fi
     fi
 
-    if $DOCKER_CMD exec -t "$NEXT_CONTAINER_ID" tedge config get az.url; then
-        if ! $DOCKER_CMD exec -t "$NEXT_CONTAINER_ID" tedge connect az --test; then
+    if $DOCKER_CMD exec -t "$container_id" tedge config get az.url; then
+        if ! $DOCKER_CMD exec -t "$container_id" tedge connect az --test; then
             return "$FAILED"
         fi
     fi
 
-    CONTAINER_IMAGE=$($DOCKER_CMD inspect "$NEXT_CONTAINER_ID" --format "{{.Image}}")
+    CONTAINER_IMAGE=$($DOCKER_CMD inspect "$container_id" --format "{{.Image}}")
     log "New image: $CONTAINER_IMAGE"
 
     return "$OK"
 }
 
 healthcheck() {
-    log "Checking new container's health"
+    container_id="$1"
+    log "Checking new container's health. id=$container_id"
     sleep 2
     ATTEMPT=1
     TIMED_OUT=0
@@ -251,7 +253,7 @@ healthcheck() {
             TIMED_OUT=1
             break
         fi
-        if is_functional; then
+        if is_functional "$container_id"; then
             log "Container is working"
             break
         fi
@@ -281,7 +283,7 @@ rollback() {
     $DOCKER_CMD start "$CONTAINER_NAME" ||:
 
     log "Performing a healthcheck on the restored container (for information purposes only)"
-    if healthcheck; then
+    if healthcheck "$CONTAINER_NAME"; then
         log "Rollback was successful and the container is functioning"
     else
         log "Rollback was successful but container healthcheck failed, though this could fail if the cloud connectivity is down"
@@ -528,7 +530,7 @@ case "$ACTION" in
             exit "$OK"
         fi
 
-        if ! healthcheck; then
+        if ! healthcheck "$CONTAINER_NAME"; then
             rollback
         fi
         ;;
