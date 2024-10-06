@@ -1,5 +1,3 @@
-## Deployment Type: Containers
-
 ## Option 3: Running thin-edge.io in an isolated container network
 
 **When to use it?**

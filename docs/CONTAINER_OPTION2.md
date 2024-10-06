@@ -1,5 +1,3 @@
-## Deployment Type: Containers
-
 ## Option 2: Accessible from outside
 
 **When to use it?**
