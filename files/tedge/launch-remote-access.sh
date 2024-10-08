@@ -1,7 +1,10 @@
 #!/bin/sh
 set -e
 
-if ! command -V docker >/dev/null 2>&1 || [ ! -e /var/run/docker.sock ]; then
+# Disable spawning from a container
+REMOTE_ACCESS_DISABLE_CONTAINER_SPAWN=${REMOTE_ACCESS_DISABLE_CONTAINER_SPAWN:-0}
+
+if ! command -V docker >/dev/null 2>&1 || [ ! -e /var/run/docker.sock ] || [ "$REMOTE_ACCESS_DISABLE_CONTAINER_SPAWN" = 1 ]; then
     echo "Launching session as a child process"
     c8y-remote-access-plugin "$@"
     exit 0
@@ -37,9 +40,6 @@ TEMPLATE=$(
         {{- range $n, $conf := .Networks}}
             {{- with $conf }}
   --network {{printf "%q" $n}} \
-                {{- range $a := $conf.Aliases}} 
-  --network-alias {{printf "%q" $a}} \
-                {{- end}}
             {{- end}}
         {{- end}}
     {{- end}}
@@ -49,12 +49,22 @@ OPTIONS=$($DOCKER_CMD inspect "$CONTAINER_ID" --format "$TEMPLATE" | tr -d "\n\\
 
 TEDGE_C8Y_URL=$(tedge config get c8y.url)
 
+# Add a host alias so the spawned container can reference the MQTT broker in the current container
+MQTT_CLIENT_HOST=$($DOCKER_CMD inspect "$CONTAINER_ID" --format "{{.NetworkSettings.IPAddress}}" ||:)
+if [ -z "$MQTT_CLIENT_HOST" ]; then
+    echo "Getting container ip address from hostname"
+    MQTT_CLIENT_HOST=$(getent hosts "$CONTAINER_NAME" | cut -d' ' -f1)
+fi
+
+echo "Running command"
+set -x
 # Launch an independent container to handle the remote access session
 # so that it can do things like restarting this container
 # shellcheck disable=SC2086
 $DOCKER_CMD run --rm -d \
     $OPTIONS \
-    -e TEDGE_MQTT_CLIENT_HOST="$CONTAINER_NAME" \
+    --add-host tedge:"$MQTT_CLIENT_HOST" \
+    -e TEDGE_MQTT_CLIENT_HOST=tedge \
     -e TEDGE_C8Y_URL="$TEDGE_C8Y_URL" \
     "$IMAGE" \
     c8y-remote-access-plugin --child "$@"
