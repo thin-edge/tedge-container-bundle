@@ -475,15 +475,7 @@ case "$ACTION" in
         ;;
     version)
         prepare
-        case "$CURRENT_CONTAINER_CONFIG_IMAGE" in
-            *:latest)
-                # Append the tedge version, as the "latest" tag is not very descriptive
-                printf '%s\t%s (%s)\n' "$CONTAINER_NAME" "$CURRENT_CONTAINER_CONFIG_IMAGE" "$TEDGE_VERSION"
-                ;;
-            *)
-                printf '%s\t%s\n' "$CONTAINER_NAME" "$CURRENT_CONTAINER_CONFIG_IMAGE"
-                ;;
-        esac
+        printf '%s\t%s\n' "$CONTAINER_NAME" "$CURRENT_CONTAINER_CONFIG_IMAGE"
         ;;
     operation_parameters)
         printf ':::begin-tedge:::\n'
