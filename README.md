@@ -24,111 +24,20 @@ The **tedge-container-bundle** provides the following features:
 The following are required in order to deploy the container
 
 * docker
-* docker compose
 
-### Step 1: Create a device certificate inside a named volume
+### Choose a setup
 
-Before you can start the containers, you need to create a device certificate inside a named volume, and also to persist the tedge and mosquitto data
+[Option 1: On Host Network](./docs/CONTAINER_OPTION1.md)
 
-1. Create a docker network and volumes which will be used to store the device certificate and the tedge data
+[Option 2: Container network (Recommended)](./docs/CONTAINER_OPTION2.md)
 
-    ```sh
-    docker network create tedge
-    docker volume create device-certs
-    docker volume create tedge
-    ```
-
-2. Set the Cumulocity IoT variable (to make it easier to copy/paste the remaining instructions)
-
-    ```sh
-    TEDGE_C8Y_URL="$C8Y_DOMAIN"
-
-    # Example
-    TEDGE_C8Y_URL=my.cumulocity.com
-    ```
-
-3. Create a new device certificate
-
-    ```sh
-    docker run --rm -it \
-        -v "device-certs:/etc/tedge/device-certs" \
-        -e "TEDGE_C8Y_URL=$TEDGE_C8Y_URL" \
-        ghcr.io/thin-edge/tedge-container-bundle:latest tedge cert create --device-id "<mydeviceid>"
-    ```
-
-    Where you should replace the `<mydeviceid>` with the device's identity.
-
-4. Upload the device certificate to Cumulocity IoT
-
-    ```sh
-    docker run --rm -it \
-        -v "device-certs:/etc/tedge/device-certs" \
-        -e "TEDGE_C8Y_URL=$TEDGE_C8Y_URL" \
-        ghcr.io/thin-edge/tedge-container-bundle:latest tedge cert upload c8y
-    ```
-
-    If you are having problems with the docker network, you can try to use the host network and explicitly set a DNS address:
-
-    ```sh
-    docker run --rm -it --dns 8.8.8.8 --network host \
-        -v "device-certs:/etc/tedge/device-certs" \
-        -e "TEDGE_C8Y_URL=$TEDGE_C8Y_URL" \
-        ghcr.io/thin-edge/tedge-container-bundle:latest tedge cert upload c8y
-    ```
-
-    **Tip**
-
-    If you don't want to be prompted for the Cumulocity IoT Username and Password (required to upload the certificate), then you can provide them via the following environment variables:
-
-    ```sh
-    docker run --rm -it \
-        -v "device-certs:/etc/tedge/device-certs" \
-        -e "TEDGE_C8Y_URL=$TEDGE_C8Y_URL" \
-        -e "C8Y_USER=$C8Y_USER" \
-        -e "C8Y_PASSWORD=$C8Y_PASSWORD" \
-        ghcr.io/thin-edge/tedge-container-bundle:latest tedge cert upload c8y
-    ```
-
-### Step 2: Start thin-edge.io
-
-Once the device certificate has been created inside the named volume, the same volume can be used when starting the container.
-
-```sh
-docker run -d \
-    --name tedge \
-    --restart always \
-    --network tedge \
-    -p "127.0.0.1:1884:1883" \
-    -p "127.0.0.1:9000:8000" \
-    -p "127.0.0.1:9001:8001" \
-    --add-host host.docker.internal:host-gateway \
-    -v "device-certs:/etc/tedge/device-certs" \
-    -v "tedge:/data/tedge" \
-    -v /var/run/docker.sock:/var/run/docker.sock:rw \
-    -e "TEDGE_C8Y_URL=$TEDGE_C8Y_URL" \
-    ghcr.io/thin-edge/tedge-container-bundle:latest
-```
-
-The `TEDGE_C8Y_URL` env variable is used to set the target Cumulocity IoT so that thin-edge.io knows where to connect to.
 
 ### Settings
 
-All of the thin-edge.io settings can be customized via environment variables, which can be useful if you want to change the port numbers like in the following example:
+All of the thin-edge.io settings can be customized via environment variables which can be added via the `-e KEY=VALUE` to the `docker run` command:
 
 ```sh
-docker run -d \
-    --name tedge \
-    --restart always \
-    --add-host host.docker.internal:host-gateway \
-    -p "127.0.0.1:1884:1883" \
-    -p "127.0.0.1:9000:8000" \
-    -p "127.0.0.1:9001:8001" \
-    -v "device-certs:/etc/tedge/device-certs" \
-    -v "tedge:/data/tedge" \
-    -v /var/run/docker.sock:/var/run/docker.sock:rw \
-    -e "TEDGE_C8Y_URL=$TEDGE_C8Y_URL" \
-    -e TEDGE_C8Y_OPERATIONS_AUTO_LOG_UPLOAD=always \
-    ghcr.io/thin-edge/tedge-container-bundle:latest
+TEDGE_C8Y_OPERATIONS_AUTO_LOG_UPLOAD=always
 ```
 
 ### Development
