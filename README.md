@@ -30,9 +30,8 @@ The following are required in order to deploy the container
 
 [Option 1: On Host Network](./docs/CONTAINER_OPTION1.md)
 
-[Option 2: Container network and make accessible to host (Recommended)](./docs/CONTAINER_OPTION2.md)
+[Option 2: Container network (Recommended)](./docs/CONTAINER_OPTION2.md)
 
-[Option 3: An isolated container network](./docs/CONTAINER_OPTION3.md)
 
 ### Settings
 

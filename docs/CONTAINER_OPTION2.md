@@ -1,4 +1,4 @@
-## Option 2: Accessible from outside
+## Option 2: Container network
 
 **When to use it?**
 
@@ -51,6 +51,7 @@ docker run -d \
     --name tedge \
     --restart always \
     --add-host host.docker.internal:host-gateway \
+    --network tedge \
     -p "127.0.0.1:1883:1883" \
     -p "127.0.0.1:8000:8000" \
     -p "127.0.0.1:8001:8001" \
@@ -69,6 +70,7 @@ docker run -d \
     --name tedge \
     --restart always \
     --add-host host.docker.internal:host-gateway \
+    --network tedge \
     -p "127.0.0.1:1884:1883" \
     -p "127.0.0.1:9000:8000" \
     -p "127.0.0.1:9001:8001" \
@@ -82,10 +84,11 @@ docker run -d \
 
 ### Subscribing to the MQTT broker
 
-Assuming the container network is called `tedge`, then run:
+Assuming the container network is called `tedge`, then you can subscribe to the MQTT broker using the following command:
 
 ```sh
-docker run --rm -it --network tedge \
+docker run --rm -it \
+    --network tedge \
     -e TEDGE_MQTT_CLIENT_HOST=tedge \
     ghcr.io/thin-edge/tedge-container-bundle \
     tedge mqtt sub '#'
@@ -95,4 +98,7 @@ Or you can access the MQTT broker directly from the host using the port mappings
 
 ```sh
 mosquitto_sub -h 127.0.0.1 -p 1883 -t '#'
+
+# or if you used another port
+mosquitto_sub -h 127.0.0.1 -p 1884 -t '#'
 ```
