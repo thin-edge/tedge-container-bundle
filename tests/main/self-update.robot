@@ -39,14 +39,14 @@ Self update should only update if there is a new image
 Self update using software update operation
     # pre-condition
     Device Should Have Installed Software
-    ...    {"name": "tedge", "version": "tedge-container-bundle-tedge:.*", "softwareType": "self"}    timeout=10
+    ...    {"name": "tedge", "version": "tedge-container-bundle-tedge", "softwareType": "self"}    timeout=10
 
     ${operation}=    Cumulocity.Install Software
     ...    {"name": "tedge", "version": "tedge-container-bundle-tedge-next", "softwareType": "self"}
 
     Cumulocity.Operation Should Be SUCCESSFUL    ${operation}    timeout=120
     Device Should Have Installed Software
-    ...    {"name": "tedge", "version": "tedge-container-bundle-tedge-next:.*", "softwareType": "self"}
+    ...    {"name": "tedge", "version": "tedge-container-bundle-tedge-next", "softwareType": "self"}
     [Teardown]    Collect Log Files
 
 

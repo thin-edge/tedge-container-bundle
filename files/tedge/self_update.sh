@@ -310,9 +310,10 @@ publish_message() {
 update_background() {
     log "Starting background container to perform the container update"
 
+    TEXT=$(printf 'New thin-edge.io version detected. Starting background update from %s (tedge %s)' "$CURRENT_CONTAINER_CONFIG_IMAGE" "$TEDGE_VERSION")
     PAYLOAD=$(
         printf '{"text":"%s","image":"%s","containerId":"%s"}' \
-        "New thin-edge.io version detected. Starting background update from $TEDGE_VERSION" \
+        "$TEXT" \
         "$CURRENT_CONTAINER_CONFIG_IMAGE" \
         "$CURRENT_CONTAINER_ID"
     )
@@ -474,7 +475,7 @@ case "$ACTION" in
         ;;
     version)
         prepare
-        printf '%s\t%s:%s\n' "$CONTAINER_NAME" "$CURRENT_CONTAINER_CONFIG_IMAGE" "$TEDGE_VERSION"
+        printf '%s\t%s\n' "$CONTAINER_NAME" "$CURRENT_CONTAINER_CONFIG_IMAGE"
         ;;
     operation_parameters)
         printf ':::begin-tedge:::\n'
@@ -500,9 +501,10 @@ case "$ACTION" in
         fi
 
         # Image is already up to date
+        TEXT=$(printf 'Successfully updated thin-edge.io to %s (tedge %s)' "$CURRENT_CONTAINER_CONFIG_IMAGE" "$TEDGE_VERSION")
         PAYLOAD=$(
             printf '{"text":"%s","image":"%s","containerId":"%s"}' \
-            "Successfully updated thin-edge.io to $TEDGE_VERSION" \
+            "$TEXT" \
             "$CURRENT_CONTAINER_CONFIG_IMAGE" \
             "$CURRENT_CONTAINER_ID"
         )
