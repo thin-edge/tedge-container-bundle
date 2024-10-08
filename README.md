@@ -24,7 +24,6 @@ The **tedge-container-bundle** provides the following features:
 The following are required in order to deploy the container
 
 * docker
-* docker compose
 
 ### Choose a setup
 
