@@ -2,7 +2,7 @@ set dotenv-load
 
 IMAGE := "tedge-container-bundle"
 TEDGE_IMAGE := "tedge"
-TEDGE_TAG := "1.3.0"
+TEDGE_TAG := "1.3.1"
 TAG := "latest"
 ENV_FILE := ".env"
 
