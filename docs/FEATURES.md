@@ -80,6 +80,14 @@ After the pre-requisites are met, you can easily access your device using the fo
         --configuration device-host
     ```
 
+**Limitations**
+
+If you create a "SSH" remote access configuration item, then you MUST use the docker's gateway IP address, e.g. `172.17.0.1` instead of the `host.docker.internal` address. If you don't use the IP address, then you will get the following error in the WebSSH client (in the UI):
+
+```sh
+host.docker.internal: Name does not resolve
+```
+
 
 ### SSH daemon configuration
 
