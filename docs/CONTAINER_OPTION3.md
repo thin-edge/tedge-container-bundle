@@ -10,7 +10,13 @@
 
 ### Initial setup
 
-1. Create a docker volume which will be used to store the device certificate, and a volume for the tedge and mosquitto data
+1. Pull the latest image
+
+    ```sh
+    docker pull ghcr.io/thin-edge/tedge-container-bundle
+    ```
+
+2. Create a docker volume which will be used to store the device certificate, and a volume for the tedge and mosquitto data
 
     ```sh
     export TEDGE_C8Y_URL=example.c8y.cumulocity.com
@@ -20,7 +26,7 @@
     docker volume create tedge
     ```
 
-2. Create a new device certificate
+3. Create a new device certificate
 
     ```sh
     docker run --rm -it \
@@ -30,7 +36,7 @@
         tedge cert create --device-id "<mydeviceid>"
     ```
 
-3. Upload the device certificate to Cumulocity IoT
+4. Upload the device certificate to Cumulocity IoT
 
     ```sh
     docker run --rm -it \
