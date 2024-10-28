@@ -74,7 +74,7 @@ TMP_FILE="${TMP_LOG_DIR}/${TYPE}_${CONTAINER_NAME}_$(date -Iseconds).log"
 } > "$TMP_FILE"
 
 # Write logs to file (stripping any ansci colour codes)
-$DOCKER_CMD logs -n "$MAX_LINES" --since "$DATE_FROM" --until "$DATE_TO" "$CONTAINER_NAME" \
+$DOCKER_CMD logs -n "$MAX_LINES" --since "$DATE_FROM" --until "$DATE_TO" "$CONTAINER_NAME" 2>&1 \
     | sed -e 's/\x1b\[[0-9;]*m//g' \
     | tee -a "$TMP_FILE"
 
