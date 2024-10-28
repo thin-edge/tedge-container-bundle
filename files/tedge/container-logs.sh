@@ -84,7 +84,7 @@ echo "Uploading log file to $UPLOAD_URL" >&2
 if [ -f "$(tedge config get http.client.auth.key_file)" ] && [ -f "$(tedge config get http.client.auth.cert_file)" ]; then
     # Upload using mtl
     echo "Uploading log file using mtls"
-    curl -4 -sf \
+    curl -4 -sfL \
         -XPUT \
         --data-binary "@$TMP_FILE" \
         --capath "$(tedge config get http.ca_path)" \
@@ -93,5 +93,5 @@ if [ -f "$(tedge config get http.client.auth.key_file)" ] && [ -f "$(tedge confi
         "$UPLOAD_URL"
 else
     # Upload using default
-    curl -4 -sf -XPUT --data-binary "@$TMP_FILE" "$UPLOAD_URL"
+    curl -4 -sfL -XPUT --data-binary "@$TMP_FILE" "$UPLOAD_URL"
 fi
