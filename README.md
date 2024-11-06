@@ -87,7 +87,7 @@ After the project pre-requisites have been installed, you can start the containe
     set-session
     ```
 
-3. Init the device certificate (stored under `./device-cert) and upload it to Cumulocity IoT
+3. Init the device certificate (stored in a container volume) and upload it to Cumulocity IoT
 
     ```sh
     just init
