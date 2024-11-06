@@ -70,13 +70,30 @@ After the project pre-requisites have been installed, you can start the containe
     TEDGE_C8Y_OPERATIONS_AUTO_LOG_UPLOAD=always
     ```
 
-2. Init the device certificate (stored under `./device-cert) and upload it to Cumulocity IoT
+2. Activate your Cumulocity session using go-c8y-cli
+
+    ```sh
+    set-session
+    ```
+
+    **Note**
+
+    Your go-c8y-cli session profile needs to have the following setting set (and you will have to run `set-session` again afterwards):
+
+    ```sh
+    c8y settings update session.alwaysIncludePassword true
+
+    # Then re-activate the session
+    set-session
+    ```
+
+3. Init the device certificate (stored under `./device-cert) and upload it to Cumulocity IoT
 
     ```sh
     just init
     ```
 
-3. Start the container (using docker compose)
+4. Start the container (using docker compose)
 
     ```sh
     # using the justfile task
