@@ -24,6 +24,11 @@ start *ARGS: build-local
 stop *ARGS:
     docker compose down {{ARGS}}
 
+# Stop the compose project and delete any resources
+stop-all *ARGS:
+    docker compose --profile init down -v {{ARGS}}
+    docker compose --profile service down -v {{ARGS}}
+
 # Enabling running cross platform tools when building container images
 build-setup:
     docker run --privileged --rm tonistiigi/binfmt --install all
