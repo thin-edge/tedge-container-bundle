@@ -44,7 +44,7 @@ RUN wget -O - https://thin-edge.io/install-services.sh | sh -s -- s6_overlay \
         # the docker cli and lib into the image
         # apk add --no-cache libltdl
         # -v /usr/bin/docker:/usr/bin/docker
-        docker-cli \
+        podman-remote \
         # Enable easier management of containers using docker compose
         # without requiring the cli to be installed on the host (as read-only filesystems)
         # might not have access to it
