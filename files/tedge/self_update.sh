@@ -34,10 +34,23 @@ RUN_TEMPLATE_FILE=${RUN_TEMPLATE_FILE:-/usr/share/tedge/container_run.tpl}
 CURRENT_CONTAINER_ID=
 CURRENT_CONTAINER_CONFIG_IMAGE=
 
-DOCKER_CMD=docker
-if ! docker ps >/dev/null 2>&1; then
+DOCKER_CMD="tedge-container engine docker"
+
+if [ -z "$DOCKER_HOST" ]; then
+    DOCKER_HOST=/var/run/docker.sock
+    DOCKER_SOCKET_PATHS="/var/run/docker.sock /run/podman/podman.sock"
+    for p in $DOCKER_SOCKET_PATHS; do
+        if [ -e "$p" ]; then
+            DOCKER_HOST="$p"
+            break
+        fi
+    done
+fi
+
+
+if ! $DOCKER_CMD ps >/dev/null 2>&1; then
     if command -V sudo >/dev/null 2>&1; then
-        DOCKER_CMD="sudo docker"
+        DOCKER_CMD="sudo $DOCKER_CMD"
     fi
 fi
 
@@ -336,7 +349,7 @@ update_background() {
     UPDATER_CONTAINER_ID=$(
         $DOCKER_CMD run -d \
             --name "$UPDATER_CONTAINER_NAME" \
-            -v /var/run/docker.sock:/var/run/docker.sock:rw \
+            -v "${DOCKER_HOST}:${DOCKER_HOST}:rw" \
             "$IMAGE" \
             "$0" update --image "$IMAGE" --container-name "$CONTAINER_NAME" --container-id "$CURRENT_CONTAINER_ID" "$@"
     )
