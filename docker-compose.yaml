@@ -20,7 +20,6 @@ services:
       - tedge
 
   tedge:
-    container_name: tedge
     build:
       dockerfile: Dockerfile
       context: .
@@ -43,10 +42,10 @@ services:
 
 volumes:
   device-certs:
-    name: device-certs
+    # name: device-certs
   tedge:
-    name: tedge
+    # name: tedge
 
 networks:
   tedge:
-    name: tedge
+    # name: tedge

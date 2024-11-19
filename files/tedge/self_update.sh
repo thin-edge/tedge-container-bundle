@@ -22,7 +22,8 @@ SCRIPT_DIR=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)
 
 IMAGE="${IMAGE:-}"
 
-CONTAINER_NAME="${CONTAINER_NAME:-tedge}"
+SOFTWARE_NAME=tedge
+CONTAINER_NAME="${CONTAINER_NAME:-}"
 CURRENT_IMAGE_ID=
 TARGET_IMAGE_ID=
 FORCE=0
@@ -45,9 +46,22 @@ log() {
     echo "INFO $*" >&2
 }
 
+get_backup_container_name() {
+    echo "${CONTAINER_NAME}-bak"
+}
+
+get_updater_container_name() {
+    echo "${CONTAINER_NAME}-updater"
+}
+
 prepare() {
     # Use container id to prevent any unexpected changes
     if [ -z "$CURRENT_CONTAINER_ID" ]; then
+        if [ -z "$CONTAINER_NAME" ]; then
+            log "Reading container name by looking up the hostname. hostname=$(hostname)"
+            CONTAINER_NAME=$($DOCKER_CMD inspect "$(hostname)" --format "{{.Name}}" | sed 's|^/||' ||:)
+        fi
+
         log "Reading container configuration by name. name=$CONTAINER_NAME"
         CURRENT_CONTAINER_ID=$($DOCKER_CMD inspect "$CONTAINER_NAME" --format "{{.Id}}" ||:)
     else
@@ -192,12 +206,12 @@ update() {
     RUN_SCRIPT=$(generate_run_command_from_container "$CURRENT_CONTAINER_ID" "$IMAGE")
 
     # remove any existing backup-name
-    if $DOCKER_CMD inspect "$BACKUP_CONTAINER_NAME" >/dev/null 2>&1; then
-        $DOCKER_CMD stop "$BACKUP_CONTAINER_NAME" >/dev/null ||:
-        $DOCKER_CMD rm "$BACKUP_CONTAINER_NAME" >/dev/null ||:
+    if $DOCKER_CMD inspect "$(get_backup_container_name)" >/dev/null 2>&1; then
+        $DOCKER_CMD stop "$(get_backup_container_name)" >/dev/null ||:
+        $DOCKER_CMD rm "$(get_backup_container_name)" >/dev/null ||:
     fi
-    log "Renaming existing container. old=${CONTAINER_NAME}, new=$BACKUP_CONTAINER_NAME"
-    $DOCKER_CMD container rename "$CURRENT_CONTAINER_ID" "$BACKUP_CONTAINER_NAME"
+    log "Renaming existing container. old=${CONTAINER_NAME}, new=$(get_backup_container_name)"
+    $DOCKER_CMD container rename "$CURRENT_CONTAINER_ID" "$(get_backup_container_name)"
 
     log "Starting the tedge container. name=$CONTAINER_NAME, run_script=$RUN_SCRIPT"
     log "Run script: $(cat "$RUN_SCRIPT")"
@@ -267,9 +281,9 @@ healthcheck() {
 rollback() {
     log "Rolling back container. name=$CONTAINER_NAME (unhealthy)"
 
-    if ! $DOCKER_CMD inspect "$BACKUP_CONTAINER_NAME" >/dev/null 2>&1; then
+    if ! $DOCKER_CMD inspect "$(get_backup_container_name)" >/dev/null 2>&1; then
         # Don't do anything if the backup does not exist, as a broken container is better then no container!
-        log "ERROR: Could not rollback container as the backup no longer exists! This is unexpected. name=$BACKUP_CONTAINER_NAME"
+        log "ERROR: Could not rollback container as the backup no longer exists! This is unexpected. name=$(get_backup_container_name)"
         exit 1
     fi
 
@@ -282,8 +296,8 @@ rollback() {
     log "----- End of unhealthy container logs -----"
     $DOCKER_CMD rm "$CONTAINER_NAME" ||:
 
-    log "Restoring container from backup. name=$BACKUP_CONTAINER_NAME (new name will be $CONTAINER_NAME)"
-    $DOCKER_CMD container rename "$BACKUP_CONTAINER_NAME" "$CONTAINER_NAME"
+    log "Restoring container from backup. name=$(get_backup_container_name) (new name will be $CONTAINER_NAME)"
+    $DOCKER_CMD container rename "$(get_backup_container_name)" "$CONTAINER_NAME"
     $DOCKER_CMD container update "$CONTAINER_NAME" --restart always
     $DOCKER_CMD start "$CONTAINER_NAME" ||:
 
@@ -326,19 +340,19 @@ update_background() {
     # shellcheck disable=SC2086
     set -- $OPTIONS
 
-    if $DOCKER_CMD inspect "$UPDATER_CONTAINER_NAME" >/dev/null 2>&1; then
-        log "Removing old updater container. name=$UPDATER_CONTAINER_NAME"
-        $DOCKER_CMD stop "$UPDATER_CONTAINER_NAME" 2>/dev/null ||:
-        $DOCKER_CMD rm "$UPDATER_CONTAINER_NAME" 2>/dev/null ||:
+    if $DOCKER_CMD inspect "$(get_updater_container_name)" >/dev/null 2>&1; then
+        log "Removing old updater container. name=$(get_updater_container_name)"
+        $DOCKER_CMD stop "$(get_updater_container_name)" 2>/dev/null ||:
+        $DOCKER_CMD rm "$(get_updater_container_name)" 2>/dev/null ||:
     fi
     UPDATER_CONTAINER_ID=$(
         $DOCKER_CMD run -d \
-            --name "$UPDATER_CONTAINER_NAME" \
+            --name "$(get_updater_container_name)" \
             -v /var/run/docker.sock:/var/run/docker.sock:rw \
             "$IMAGE" \
             "$0" update --image "$IMAGE" --container-name "$CONTAINER_NAME" --container-id "$CURRENT_CONTAINER_ID" "$@"
     )
-    log "Updater container. id=$UPDATER_CONTAINER_ID, name=$UPDATER_CONTAINER_NAME"
+    log "Updater container. id=$UPDATER_CONTAINER_ID, name=$(get_updater_container_name)"
 
     # Set the container to restart (but only after the background service was launched successfully)
     log "Setting restart policy to no for existing container"
@@ -358,19 +372,19 @@ update_background() {
 
 collect_update_logs() {
     # Collect updater container logs
-    if $DOCKER_CMD inspect "$UPDATER_CONTAINER_NAME" >/dev/null 2>&1; then
+    if $DOCKER_CMD inspect "$(get_updater_container_name)" >/dev/null 2>&1; then
 
-        log "Waiting for updater container to stop (if it is running). name=$UPDATER_CONTAINER_NAME"
-        if ! wait_for_stop "$UPDATER_CONTAINER_NAME"; then
+        log "Waiting for updater container to stop (if it is running). name=$(get_updater_container_name)"
+        if ! wait_for_stop "$(get_updater_container_name)"; then
             log "Updater container is still running. Collecting logs anyway"
         fi
 
-        log "Collecting updater container logs. name=$UPDATER_CONTAINER_NAME"
+        log "Collecting updater container logs. name=$(get_updater_container_name)"
         log "----- Start of updater logs -----"
-        $DOCKER_CMD logs "$UPDATER_CONTAINER_NAME" -n 500 >&2 ||:
+        $DOCKER_CMD logs "$(get_updater_container_name)" -n 500 >&2 ||:
         log "----- End of updater logs -----"
     else
-        log "Updater container does not exist so no logs to collect. name=$UPDATER_CONTAINER_NAME"
+        log "Updater container does not exist so no logs to collect. name=$(get_updater_container_name)"
     fi
 }
 
@@ -413,10 +427,6 @@ while [ $# -gt 0 ]; do
     esac
     shift
 done
-
-# Set container names which are derived from the container name
-BACKUP_CONTAINER_NAME="${CONTAINER_NAME}-bak"
-UPDATER_CONTAINER_NAME="${CONTAINER_NAME}-updater"
 
 #
 # Main
@@ -468,14 +478,16 @@ case "$ACTION" in
             log "Module image is set to 'latest' so assuming that the container config image should stay the same. new_image=$OP_VERSION"
         fi
 
+        # Get current container name
+        CONTAINER_NAME=$($DOCKER_CMD inspect "$(hostname)" --format "{{.Name}}" | sed 's|^/||' ||:)
         printf ':::begin-tedge:::\n'
-        printf '{"containerName":"%s","image":"%s"}\n' "$OP_NAME" "$OP_VERSION"
+        printf '{"containerName":"%s","image":"%s"}\n' "$CONTAINER_NAME" "$OP_VERSION"
         printf ':::end-tedge:::\n'
         exit "$YES"
         ;;
     version)
         prepare
-        printf '%s\t%s\n' "$CONTAINER_NAME" "$CURRENT_CONTAINER_CONFIG_IMAGE"
+        printf '%s\t%s\n' "$SOFTWARE_NAME" "$CURRENT_CONTAINER_CONFIG_IMAGE"
         ;;
     operation_parameters)
         printf ':::begin-tedge:::\n'
@@ -486,7 +498,7 @@ case "$ACTION" in
     needs_update)
         prepare
         if needs_update pull; then
-            printf ':::begin-tedge:::\n{"tedgeVersion":"%s"}\n:::end-tedge:::\n' "$TEDGE_VERSION"
+            printf ':::begin-tedge:::\n{"tedgeVersion":"%s","containerName":"%s"}\n:::end-tedge:::\n' "$TEDGE_VERSION" "$CONTAINER_NAME"
             exit "$OK"
         fi
         # Image is already up to date

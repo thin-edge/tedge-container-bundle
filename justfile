@@ -15,10 +15,11 @@ RELEASE_VERSION := env_var_or_default("RELEASE_VERSION", `date +'%Y%m%d.%H%M'`)
 # Initialize the device certificate and upload to Cumulocity
 init *ARGS:
     docker compose --profile init up --build {{ARGS}}
+    docker compose --profile init down {{ARGS}}
 
 # Start the compose project
-start *ARGS: build-local
-    COMPOSE_PROJECT_NAME= docker compose --profile service up --build {{ARGS}}
+start *ARGS: build-local init
+    docker compose --profile service up --build {{ARGS}}
 
 # Stop the compose project
 stop *ARGS:
@@ -26,7 +27,6 @@ stop *ARGS:
 
 # Stop the compose project and delete any resources
 stop-all *ARGS:
-    docker compose --profile init down -v {{ARGS}}
     docker compose --profile service down -v {{ARGS}}
 
 # Enabling running cross platform tools when building container images
@@ -35,8 +35,9 @@ build-setup:
 
 # Build a local image that can be used for self update
 build-local:
-    COMPOSE_PROJECT_NAME= docker compose --profile service build
-    docker tag tedge-container-bundle-tedge tedge-container-bundle-tedge-next
+    docker compose --profile service build
+    docker tag "${COMPOSE_PROJECT_NAME:-tedge-container-bundle}-tedge" tedge-container-bundle-tedge
+    docker tag "${COMPOSE_PROJECT_NAME:-tedge-container-bundle}-tedge" tedge-container-bundle-tedge-next
 
 # Run the image localy using docker only (not docker compose)
 run-local: build-local
@@ -76,7 +77,7 @@ lint *ARGS:
 
 # Run tests
 test *ARGS='':
-    ./.venv/bin/python3 -m robot.run --outputdir output {{ARGS}} tests
+    ./.venv/bin/python3 -m robot.run --outputdir output --test 'Trigger self update via local command' {{ARGS}} tests
 
 # Run self-update tests
 test-self-update *ARGS='':

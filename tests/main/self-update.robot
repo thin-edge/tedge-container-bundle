@@ -14,7 +14,7 @@ Trigger self update via local command
     ${cmd_id}=    DateTime.Get Current Date    time_zone=UTC    result_format=epoch
     ${topic}=    Set Variable    te/device/main///cmd/self_update/local-${cmd_id}
     ${operation}=    Cumulocity.Execute Shell Command
-    ...    tedge mqtt pub -r ${topic} '{"status":"init","image":"tedge-container-bundle-tedge","containerName":"tedge"}'
+    ...    tedge mqtt pub -r ${topic} '{"status":"init","image":"tedge-container-bundle-tedge"}'
     Cumulocity.Operation Should Be SUCCESSFUL    ${operation}
 
     # TODO: Check the status of the operation
@@ -24,7 +24,7 @@ Trigger self update via local command
     ${operation}=    Cumulocity.Operation Should Be SUCCESSFUL    ${operation}
 
     ${operation}=    Cumulocity.Execute Shell Command
-    ...    echo Checking MQTT messages; timeout 2 tedge mqtt sub ${topic} || true
+    ...    echo Checking MQTT messages; timeout 60 tedge mqtt sub ${topic} || true
     ${operation}=    Cumulocity.Operation Should Be SUCCESSFUL    ${operation}
     Should Contain    ${operation["c8y_Command"]["result"]}    "status":"successful"
     [Teardown]    Clear Local Operation    ${topic}
