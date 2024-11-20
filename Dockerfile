@@ -50,12 +50,12 @@ RUN wget -O - https://thin-edge.io/install-services.sh | sh -s -- s6_overlay \
         # might not have access to it
         # Note: Volumes should be configured to persist the docker compose files
         docker-cli-compose \
-        tedge-container-plugin
+        tedge-container-plugin-ng
 
 # Set permissions of all files under /etc/tedge
 # TODO: Can thin-edge.io set permissions during installation?
 RUN chown -R tedge:tedge /etc/tedge \
-    && echo "tedge  ALL = (ALL) NOPASSWD: /usr/bin/tedge, /etc/tedge/sm-plugins/[a-zA-Z0-9]*, /bin/sync, /sbin/init, /usr/bin/tedgectl, /usr/bin/docker" >/etc/sudoers.d/tedge
+    && echo "tedge  ALL = (ALL) NOPASSWD: /usr/bin/tedge, /etc/tedge/sm-plugins/[a-zA-Z0-9]*, /bin/sync, /sbin/init, /usr/bin/tedgectl, /usr/bin/docker, /usr/bin/tedge-container" >/etc/sudoers.d/tedge
 # Custom init. scripts - e.g. write env variables data to files
 COPY cont-init.d/*  /etc/cont-init.d/
 
@@ -100,6 +100,7 @@ ENV SERVICE_TEDGE_MAPPER_COLLECTD=0
 
 ENV SERVICE_TEDGE_AGENT=1
 ENV SERVICE_C8Y_FIRMWARE_PLUGIN=0
+ENV SERVICE_TEDGE_CONTAINER_PLUGIN=1
 
 
 # Control thin-edge.io settings via env variables

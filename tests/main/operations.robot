@@ -11,6 +11,9 @@ Suite Setup     Set Main Device
 Grace period to allow container to startup
     Sleep    5s    reason=Wait for container to startup
 
+tedge-container-plugin service is up
+    Cumulocity.Should Have Services    name=tedge-container-plugin    status=up    max_count=1
+
 Restart device
     Skip
     ${date_from}=    Get Test Start Time
