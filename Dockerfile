@@ -55,7 +55,7 @@ RUN wget -O - https://thin-edge.io/install-services.sh | sh -s -- s6_overlay \
 # Set permissions of all files under /etc/tedge
 # TODO: Can thin-edge.io set permissions during installation?
 RUN chown -R tedge:tedge /etc/tedge \
-    && echo "tedge  ALL = (ALL) NOPASSWD:SETENV: /usr/bin/tedge, /etc/tedge/sm-plugins/[a-zA-Z0-9]*, /bin/sync, /sbin/init, /usr/bin/tedgectl, /usr/bin/docker, /usr/bin/tedge-container, /bin/kill" >/etc/sudoers.d/tedge
+    && echo "tedge  ALL = (ALL) NOPASSWD:SETENV: /usr/bin/tedge, /etc/tedge/sm-plugins/[a-zA-Z0-9]*, /bin/sync, /sbin/init, /usr/bin/tedgectl, /bin/kill, /usr/bin/tedge-container, /usr/bin/docker, /usr/bin/podman, /usr/bin/podman-remote, /usr/bin/podman-compose" >/etc/sudoers.d/tedge
 # Custom init. scripts - e.g. write env variables data to files
 COPY cont-init.d/*  /etc/cont-init.d/
 
