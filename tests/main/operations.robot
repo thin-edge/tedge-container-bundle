@@ -45,6 +45,7 @@ Install application using docker compose
     ${software}=    Device Should Have Installed Software
     ...    {"name": "nodered-instance1", "version": "1.0.0", "softwareType": "container-group"}
 
+    Cumulocity.Should Have Services    service_type=container-group    name=nodered-instance1@node-red    status=up    max_count=1
 
 Get Container Logs
     ${operation}=    Cumulocity.Get Log File    container    search_text=tedge    maximum_lines=100
