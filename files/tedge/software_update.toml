@@ -9,7 +9,7 @@ action = "proceed"
 on_success = "check"
 
 [check]
-script = "self_update.sh is_update_requested --update-list ${.payload.updateList}"
+script = "sudo -E tedge-container self check ${.payload.updateList}"
 on_exit.0 = "container_self_update"
 on_exit.1 = "process"
 on_exit._ = "failed"

@@ -72,10 +72,8 @@ COPY files/tedge/c8y_RemoteAccessConnect /etc/tedge/operations/c8y/
 COPY files/tedge/c8y_RemoteAccessConnect /etc/tedge/operations/c8y/
 COPY files/tedge/launch-remote-access.sh /usr/bin/
 # Self update workflow
-COPY files/tedge/self.sh /etc/tedge/sm-plugins/self
 COPY files/tedge/software_update.toml /etc/tedge/operations/
 COPY files/tedge/self_update.toml /etc/tedge/operations/
-COPY files/tedge/self_update.sh /usr/bin/
 COPY files/tedge/container_run.tpl /usr/share/tedge/
 # Container log_upload customer handler
 COPY files/tedge/container-logs.sh /usr/bin/

@@ -13,20 +13,23 @@ action = "proceed"
 on_success = "needs_update"
 
 [needs_update]
-script = "self_update.sh needs_update --image ${.payload.image} --container-name ${.payload.containerName}"
+script = "sudo -E tedge-container tools container-clone --image ${.payload.image} --container ${.payload.containerName} --check"
 on_exit.0 = "update"
-on_exit.1 = "successful"
+on_exit.2 = "successful"
 on_exit._ = "failed"
 
 [update]
-script = "self_update.sh update_background --image ${.payload.image} --container-name ${.payload.containerName}"
+script = "sudo -E tedge-container tools container-clone --fork --image ${.payload.image} --container ${.payload.containerName}"
 on_success = "verify"
 on_error = "failed"
 
 [verify]
-script = "self_update.sh verify --image ${.payload.image} --container-name ${.payload.containerName}"
-on_success = "successful"
-on_error = "failed"
+script = "sudo -E tedge-container tools container-clone --image ${.payload.image} --container ${.payload.containerName} --check"
+# Expected 2 which means no update is required (as it should of already happened).
+# If an update is still required, then it generally means something unexpected happened
+on_exit.0 = "failed"
+on_exit.2 = "successful"
+on_exit._ = "failed"
 
 [successful]
 action = "cleanup"
