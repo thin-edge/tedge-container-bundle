@@ -1,10 +1,9 @@
 *** Settings ***
 Resource        ../resources/common.resource
 Library         DateTime
-Library         Cumulocity
-Library         DeviceLibrary
 
-Suite Setup     Set Main Device
+Suite Setup     Setup Device
+Suite Teardown    Stop Device
 
 
 *** Test Cases ***

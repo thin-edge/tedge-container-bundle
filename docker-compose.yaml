@@ -43,10 +43,9 @@ services:
 
 volumes:
   device-certs:
-    name: device-certs
   tedge:
-    name: tedge
 
 networks:
   tedge:
     name: tedge
+    external: true

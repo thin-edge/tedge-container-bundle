@@ -1,11 +1,9 @@
 *** Settings ***
 Library     Cumulocity
+Library    DeviceLibrary    bootstrap_script=start-container-bundle.sh
 
 
 *** Variables ***
-${DEVICE_ID}            %{DEVICE_ID=main}
-${CHILD_DEVICE_1}       ${DEVICE_ID}:device:child01
-${CHILD_DEVICE_2}       ${DEVICE_ID}:device:child02
 
 # Cumulocity settings
 &{C8Y_CONFIG}
@@ -14,13 +12,22 @@ ${CHILD_DEVICE_2}       ${DEVICE_ID}:device:child02
 ...                     password=%{C8Y_PASSWORD= }
 ...                     tenant=%{C8Y_TENANT= }
 
+# Docker adapter settings (to control which image is used in the system tests).
+# The user just needs to set the IMAGE env variable
+&{DOCKER_CONFIG}    image=%{TEST_IMAGE=}
 
 *** Keywords ***
-Set Main Device
-    Cumulocity.Set Device    ${DEVICE_ID}
 
-Set Child Device1
-    Cumulocity.Set Device    ${CHILD_DEVICE_1}
+Setup Device
+    ${DEVICE_ID}=    DeviceLibrary.Setup    skip_bootstrap=${True}
 
-Set Child Device2
-    Cumulocity.Set Device    ${CHILD_DEVICE_2}
+    Transfer To Device    ${CURDIR}/../../test-images/common/container-bundle.sh    /usr/bin/
+    Transfer To Device    ${CURDIR}/../*.tar.gz    /build/
+    Execute Command    container-bundle.sh start
+
+    Set Suite Variable    ${DEVICE_ID}
+    Cumulocity.External Identity Should Exist    ${DEVICE_ID}
+
+Stop Device
+    DeviceLibrary.Execute Command    container-bundle.sh stop
+    Cumulocity.Delete Managed Object and Device User    ${DEVICE_ID}
