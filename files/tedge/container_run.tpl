@@ -44,9 +44,6 @@
         {{- if .PublishAllPorts}}
   --publish-all \
         {{- end}}
-        {{- if .UTSMode}}
-  --uts {{printf "%q" .UTSMode}} \
-        {{- end}}
   --restart always \
         {{- range $e := .ExtraHosts}}
   --add-host {{printf "%q" $e}} \
