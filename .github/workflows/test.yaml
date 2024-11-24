@@ -46,6 +46,8 @@ jobs:
           - { target: tedge-container-bundle, name: "docker v20", image: "docker:20-dind" }
           # podman
           - { target: tedge-container-bundle, name: "podman", image: debian-systemd-podman-cli }
+          - { target: tedge-container-bundle, name: "podman v5", image: "podman-v5" }
+          - { target: tedge-container-bundle, name: "podman v4", image: "podman-v4" }
     steps:
       - name: Checkout
         uses: actions/checkout@v4

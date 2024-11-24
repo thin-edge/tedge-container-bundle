@@ -79,7 +79,13 @@ start() {
             CONTAINER_OPTIONS="$CONTAINER_OPTIONS -v /var/run/docker.sock:/var/run/docker.sock:rw"
             ;;
         podman)
-            CONTAINER_OPTIONS="$CONTAINER_OPTIONS -v /var/run/docker.sock:/var/run/docker.sock:rw"
+            # Mount socket to a path expected by the container under test
+            if [ -e /run/podman/podman.sock ]; then
+                CONTAINER_OPTIONS="$CONTAINER_OPTIONS -v /run/podman/podman.sock:/var/run/docker.sock:rw"
+            else
+                echo "Could not the podman socket"
+                exit 1
+            fi
             ;;
     esac
 
