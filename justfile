@@ -31,6 +31,7 @@ init-dotenv:
 
 # Enabling running cross platform tools when building container images
 build-setup:
+    docker buildx install
     docker run --privileged --rm tonistiigi/binfmt --install all
 
 
@@ -61,14 +62,14 @@ lint *ARGS:
 # --------------------------------------------
 
 # Build test images
-build-test:
-    echo "Building tedge-container-bundle images"
-    docker buildx create --use
-    just build "docker,dest=./tests/tedge-container-bundle_99.99.1.tar.gz" 99.99.1
-    just build "docker,dest=./tests/tedge-container-bundle_99.99.2.tar.gz" 99.99.2
-
+build-test: build-test-bundles
     echo "Creating test infrastructure image"
     docker build --load -t {{TEST_IMAGE}} -f ./test-images/{{TEST_IMAGE_SRC}}/Dockerfile .
+
+build-test-bundles:
+    echo "Building tedge-container-bundle images"
+    just build "docker,dest=./tests/tedge-container-bundle_99.99.1.tar.gz" 99.99.1
+    just build "docker,dest=./tests/tedge-container-bundle_99.99.2.tar.gz" 99.99.2
 
 # Run tests
 test *ARGS='':

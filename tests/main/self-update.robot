@@ -1,10 +1,9 @@
 *** Settings ***
 Resource        ../resources/common.resource
 Library         DateTime
-Library         Cumulocity
-Library         DeviceLibrary
 
-Suite Setup     Set Main Device
+Suite Setup     Setup Device
+Suite Teardown    Stop Device
 
 Test Tags       self-update
 
@@ -14,7 +13,7 @@ Trigger self update via local command
     ${cmd_id}=    DateTime.Get Current Date    time_zone=UTC    result_format=epoch
     ${topic}=    Set Variable    te/device/main///cmd/self_update/local-${cmd_id}
     ${operation}=    Cumulocity.Execute Shell Command
-    ...    tedge mqtt pub -r ${topic} '{"status":"init","image":"tedge-container-bundle-tedge","containerName":"tedge"}'
+    ...    tedge mqtt pub -r ${topic} '{"status":"init","image":"ghcr.io/thin-edge/tedge-container-bundle:99.99.1","containerName":"tedge"}'
     Cumulocity.Operation Should Be SUCCESSFUL    ${operation}
 
     # TODO: Check the status of the operation
@@ -31,7 +30,7 @@ Trigger self update via local command
 
 Self update should only update if there is a new image
     ${operation}=    Cumulocity.Install Software
-    ...    {"name": "tedge", "version": "tedge-container-bundle-tedge", "softwareType": "self"}
+    ...    {"name": "tedge", "version": "ghcr.io/thin-edge/tedge-container-bundle:99.99.1", "softwareType": "self"}
     Cumulocity.Operation Should Be SUCCESSFUL    ${operation}
     # TODO: Robotframework does not provide an easy way to provide the datetime with timezone (which is required by c8y-api)
     # Cumulocity.Device Should Have Event/s    type=tedge_self_update    after=${date}    minimum=0    maximum=0
@@ -39,14 +38,14 @@ Self update should only update if there is a new image
 Self update using software update operation
     # pre-condition
     Device Should Have Installed Software
-    ...    {"name": "tedge", "version": "tedge-container-bundle-tedge", "softwareType": "self"}    timeout=10
+    ...    {"name": "tedge", "version": "tedge-container-bundle:99.99.1", "softwareType": "self"}    timeout=10
 
     ${operation}=    Cumulocity.Install Software
-    ...    {"name": "tedge", "version": "tedge-container-bundle-tedge-next", "softwareType": "self"}
+    ...    {"name": "tedge", "version": "ghcr.io/thin-edge/tedge-container-bundle:99.99.2", "softwareType": "self"}
 
     Cumulocity.Operation Should Be SUCCESSFUL    ${operation}    timeout=120
     Device Should Have Installed Software
-    ...    {"name": "tedge", "version": "tedge-container-bundle-tedge-next", "softwareType": "self"}
+    ...    {"name": "tedge", "version": "tedge-container-bundle:99.99.2", "softwareType": "self"}
     [Teardown]    Collect Log Files
 
 
