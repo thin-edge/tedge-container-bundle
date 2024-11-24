@@ -49,14 +49,14 @@ prepare() {
     # Use container id to prevent any unexpected changes
     if [ -z "$CURRENT_CONTAINER_ID" ]; then
         log "Reading container configuration by name. name=$CONTAINER_NAME"
-        CURRENT_CONTAINER_ID=$($DOCKER_CMD inspect "$CONTAINER_NAME" --format "{{.Id}}" ||:)
+        CURRENT_CONTAINER_ID=$($DOCKER_CMD container inspect "$CONTAINER_NAME" --format "{{.Id}}" ||:)
     else
         log "Reading container configuration by id. id=$CURRENT_CONTAINER_ID"
     fi
-    CURRENT_CONTAINER_CONFIG_IMAGE=$($DOCKER_CMD inspect "$CURRENT_CONTAINER_ID" --format "{{.Config.Image}}" ||:)
+    CURRENT_CONTAINER_CONFIG_IMAGE=$($DOCKER_CMD container inspect "$CURRENT_CONTAINER_ID" --format "{{.Config.Image}}" ||:)
 
     if [ -z "$IMAGE" ]; then
-        value=$($DOCKER_CMD inspect "$CURRENT_CONTAINER_ID" --format "{{.Config.Image}}" ||:)
+        value=$($DOCKER_CMD container inspect "$CURRENT_CONTAINER_ID" --format "{{.Config.Image}}" ||:)
         if [ -n "$value" ]; then
             IMAGE="$value"
             log "Detected container image from container. id=$CURRENT_CONTAINER_ID, image=$value"
@@ -65,8 +65,8 @@ prepare() {
 }
 
 needs_update() {
-    CURRENT_IMAGE_ID=$($DOCKER_CMD inspect "$CURRENT_CONTAINER_ID" --format "{{.Image}}" ||:)
-    CURRENT_IMAGE_NAME=$($DOCKER_CMD inspect "$CURRENT_CONTAINER_ID" --format "{{.Config.Image}}" ||:)
+    CURRENT_IMAGE_ID=$($DOCKER_CMD container inspect "$CURRENT_CONTAINER_ID" --format "{{.Image}}" ||:)
+    CURRENT_IMAGE_NAME=$($DOCKER_CMD container inspect "$CURRENT_CONTAINER_ID" --format "{{.Config.Image}}" ||:)
     log "Current container. imageId=$CURRENT_IMAGE_ID, imageName=$CURRENT_IMAGE_NAME"
 
     case "${1:-}" in
@@ -103,7 +103,7 @@ needs_update() {
 }
 
 is_container_running() {
-    IS_RUNNING=$($DOCKER_CMD inspect "$1" --format "{{.State.Running}}" 2>/dev/null ||:)
+    IS_RUNNING=$($DOCKER_CMD container inspect "$1" --format "{{.State.Running}}" 2>/dev/null ||:)
     [ "$IS_RUNNING" = true ]
 }
 
@@ -152,7 +152,7 @@ generate_run_command_from_container() {
             "$SCRIPT_DIR/container_run.tpl"
     )
 
-    RUN_OPTIONS=$($DOCKER_CMD inspect "$container_spec" --format "$RUN_TEMPLATE")
+    RUN_OPTIONS=$($DOCKER_CMD container inspect "$container_spec" --format "$RUN_TEMPLATE")
     RUN_SCRIPT_CONTENTS=$(
         cat <<EOT
 #!/bin/sh
@@ -192,7 +192,7 @@ update() {
     RUN_SCRIPT=$(generate_run_command_from_container "$CURRENT_CONTAINER_ID" "$IMAGE")
 
     # remove any existing backup-name
-    if $DOCKER_CMD inspect "$BACKUP_CONTAINER_NAME" >/dev/null 2>&1; then
+    if $DOCKER_CMD container inspect "$BACKUP_CONTAINER_NAME" >/dev/null 2>&1; then
         $DOCKER_CMD stop "$BACKUP_CONTAINER_NAME" >/dev/null ||:
         $DOCKER_CMD rm "$BACKUP_CONTAINER_NAME" >/dev/null ||:
     fi
@@ -212,7 +212,7 @@ update() {
 is_functional() {
     container_id="$1"
     # Check container state
-    IS_RUNNING=$($DOCKER_CMD inspect "$container_id" --format "{{.State.Running}}" 2>/dev/null ||:)
+    IS_RUNNING=$($DOCKER_CMD container inspect "$container_id" --format "{{.State.Running}}" 2>/dev/null ||:)
     if [ "$IS_RUNNING" != true ]; then
         return "$FAILED"
     fi
@@ -236,7 +236,7 @@ is_functional() {
         fi
     fi
 
-    CONTAINER_IMAGE=$($DOCKER_CMD inspect "$container_id" --format "{{.Image}}")
+    CONTAINER_IMAGE=$($DOCKER_CMD container inspect "$container_id" --format "{{.Image}}")
     log "New image: $CONTAINER_IMAGE"
 
     return "$OK"
@@ -267,7 +267,7 @@ healthcheck() {
 rollback() {
     log "Rolling back container. name=$CONTAINER_NAME (unhealthy)"
 
-    if ! $DOCKER_CMD inspect "$BACKUP_CONTAINER_NAME" >/dev/null 2>&1; then
+    if ! $DOCKER_CMD container inspect "$BACKUP_CONTAINER_NAME" >/dev/null 2>&1; then
         # Don't do anything if the backup does not exist, as a broken container is better then no container!
         log "ERROR: Could not rollback container as the backup no longer exists! This is unexpected. name=$BACKUP_CONTAINER_NAME"
         exit 1
@@ -326,7 +326,7 @@ update_background() {
     # shellcheck disable=SC2086
     set -- $OPTIONS
 
-    if $DOCKER_CMD inspect "$UPDATER_CONTAINER_NAME" >/dev/null 2>&1; then
+    if $DOCKER_CMD container inspect "$UPDATER_CONTAINER_NAME" >/dev/null 2>&1; then
         log "Removing old updater container. name=$UPDATER_CONTAINER_NAME"
         $DOCKER_CMD stop "$UPDATER_CONTAINER_NAME" 2>/dev/null ||:
         $DOCKER_CMD rm "$UPDATER_CONTAINER_NAME" 2>/dev/null ||:
@@ -358,7 +358,7 @@ update_background() {
 
 collect_update_logs() {
     # Collect updater container logs
-    if $DOCKER_CMD inspect "$UPDATER_CONTAINER_NAME" >/dev/null 2>&1; then
+    if $DOCKER_CMD container inspect "$UPDATER_CONTAINER_NAME" >/dev/null 2>&1; then
 
         log "Waiting for updater container to stop (if it is running). name=$UPDATER_CONTAINER_NAME"
         if ! wait_for_stop "$UPDATER_CONTAINER_NAME"; then
