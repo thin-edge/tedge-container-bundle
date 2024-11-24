@@ -2,7 +2,6 @@
     golang template to build the docker run options using `docker inspect <container> --format "container_run.tpl"`
     Credit: https://gist.github.com/efrecon/8ce9c75d518b6eb863f667442d7bc679
 */}}
-  --name {{printf "%q" .Name}} \
     {{- with .HostConfig}}
         {{- if .Privileged}}
   --privileged \

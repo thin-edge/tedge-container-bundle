@@ -144,7 +144,9 @@ generate_run_command_from_container() {
     container_spec="$1"
     image="$2"
 
-    # Use first existing tmeplate
+    # trim any leading / as it is not supported by podman
+    name=$($DOCKER_CMD container inspect "$container_spec" --format "{{.Name}}" | tr -d '/')
+
     # Include looking for template locally to make it easier to run locally during development
     RUN_TEMPLATE=$(
         read_container_run_template \
@@ -157,7 +159,7 @@ generate_run_command_from_container() {
         cat <<EOT
 #!/bin/sh
 set -e
-$DOCKER_CMD run -d \\$RUN_OPTIONS
+$DOCKER_CMD run -d --name "$name" \\$RUN_OPTIONS
   $image
 EOT
     )
