@@ -1,13 +1,31 @@
-#!/usr/bin/env bash
+#!/bin/sh
 set -e
-
-alias docker='sudo tedge-container engine docker'
 
 ENGINE=
 if command -V docker >/dev/null 2>&1; then
     ENGINE=docker
 elif command -V podman >/dev/null 2>&1; then
     ENGINE=podman
+    alias docker='podman'
+fi
+
+is_root() { [ "$(id -u)" = 0 ]; }
+
+if ! is_root && command -V sudo >/dev/null 2>&1; then
+    case "$ENGINE" in
+        podman)
+            alias docker='sudo podman'
+            ;;
+        docker)
+            alias docker='sudo docker'
+            ;;
+    esac
+else
+    case "$ENGINE" in
+        podman)
+            alias docker='podman'
+            ;;
+    esac
 fi
 
 
@@ -52,26 +70,23 @@ bootstrap_certificate() {
 }
 
 start() {
-    CONTAINER_OPTIONS=()
+    CONTAINER_OPTIONS=""
 
     # container engine specific instructions
     case "$ENGINE" in
         docker)
-            CONTAINER_OPTIONS+=(
-                --add-host host.docker.internal:host-gateway
-                -v /var/run/docker.sock:/var/run/docker.sock:rw
-            )
+            CONTAINER_OPTIONS="$CONTAINER_OPTIONS --add-host host.docker.internal:host-gateway"
+            CONTAINER_OPTIONS="$CONTAINER_OPTIONS -v /var/run/docker.sock:/var/run/docker.sock:rw"
             ;;
         podman)
-            CONTAINER_OPTIONS+=(
-                -v /var/run/docker.sock:/var/run/docker.sock:rw
-            )
+            CONTAINER_OPTIONS="$CONTAINER_OPTIONS -v /var/run/docker.sock:/var/run/docker.sock:rw"
             ;;
     esac
 
+    # shellcheck disable=SC2086
     docker run -d \
         --name tedge \
-        "${CONTAINER_OPTIONS[@]}" \
+        $CONTAINER_OPTIONS \
         --restart always \
         --network tedge \
         -p "127.0.0.1:1883:1883" \
