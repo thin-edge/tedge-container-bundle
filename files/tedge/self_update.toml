@@ -20,20 +20,8 @@ on_exit._ = "failed"
 
 [update]
 script = "self_update.sh update_background --image ${.payload.image} --container-name ${.payload.containerName}"
-on_success = "restart"
-on_error = "failed"
-
-[restart]
-# Note: a restart will trigger a container shutdown
-# and the new container will resume processing the operation
-operation = "restart"
-on_exec = "await_restart"
-
-[await_restart]
-# The new container will resume from this point
-# (assuming the workflow state file is shared between the old and new container)
-action = "await-operation-completion"
 on_success = "verify"
+on_error = "failed"
 
 [verify]
 script = "self_update.sh verify --image ${.payload.image} --container-name ${.payload.containerName}"

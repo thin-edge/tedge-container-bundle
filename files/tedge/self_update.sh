@@ -286,7 +286,7 @@ rollback() {
 
     log "Restoring container from backup. name=$BACKUP_CONTAINER_NAME (new name will be $CONTAINER_NAME)"
     $DOCKER_CMD container rename "$BACKUP_CONTAINER_NAME" "$CONTAINER_NAME"
-    $DOCKER_CMD container update "$CONTAINER_NAME" --restart always
+
     $DOCKER_CMD start "$CONTAINER_NAME" ||:
 
     log "Performing a healthcheck on the restored container (for information purposes only)"
@@ -342,10 +342,6 @@ update_background() {
     )
     log "Updater container. id=$UPDATER_CONTAINER_ID, name=$UPDATER_CONTAINER_NAME"
 
-    # Set the container to restart (but only after the background service was launched successfully)
-    log "Setting restart policy to no for existing container"
-    $DOCKER_CMD container update "${CURRENT_CONTAINER_ID}" --restart no
-
     # wait for service to start and be stable
     sleep 5
 
@@ -356,6 +352,10 @@ update_background() {
 
     # Give some time for the message to be published
     sleep 5
+
+    # Stop the previous container
+    log "Stopping the container (due to podman < 5.1 limitation)"
+    $DOCKER_CMD container stop "${CURRENT_CONTAINER_ID}"
 }
 
 collect_update_logs() {
