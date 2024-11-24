@@ -111,7 +111,7 @@ case "$ACTION" in
 
     stop)
         echo "---------------- tedge container logs --------------------------"
-        docker logs -n 1000 tedge 2>&1 ||:
+        docker logs --tail 1000 tedge 2>&1 ||:
         echo "----------------------------------------------------------------"
 
         echo

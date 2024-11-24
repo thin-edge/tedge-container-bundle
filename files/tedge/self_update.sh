@@ -280,7 +280,7 @@ rollback() {
 
     log "Collecting logs from the unhealthy container. name=$CONTAINER_NAME"
     log "----- Start of unhealthy container logs -----"
-    $DOCKER_CMD logs "$CONTAINER_NAME" -n 500 >&2 ||:
+    $DOCKER_CMD logs "$CONTAINER_NAME" --tail 500 >&2 ||:
     log "----- End of unhealthy container logs -----"
     $DOCKER_CMD rm "$CONTAINER_NAME" ||:
 
@@ -369,7 +369,7 @@ collect_update_logs() {
 
         log "Collecting updater container logs. name=$UPDATER_CONTAINER_NAME"
         log "----- Start of updater logs -----"
-        $DOCKER_CMD logs "$UPDATER_CONTAINER_NAME" -n 500 >&2 ||:
+        $DOCKER_CMD logs "$UPDATER_CONTAINER_NAME" --tail 500 >&2 ||:
         log "----- End of updater logs -----"
     else
         log "Updater container does not exist so no logs to collect. name=$UPDATER_CONTAINER_NAME"
