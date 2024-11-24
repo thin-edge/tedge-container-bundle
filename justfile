@@ -42,7 +42,7 @@ build-setup:
 # Use oci-mediatypes=false to improve compatibility with older docker verions, e.g. <= 19.0.x
 # See https://github.com/docker/buildx/issues/1964#issuecomment-1644634461
 build OUTPUT_TYPE=DEFAULT_OUTPUT_TYPE VERSION='latest': build-setup
-    docker buildx build --platform linux/arm64 --build-arg "TEDGE_IMAGE={{TEDGE_IMAGE}}" --build-arg "TEDGE_TAG={{TEDGE_TAG}}" -t "{{REGISTRY}}/{{REPO_OWNER}}/{{IMAGE}}:{{VERSION}}" -t "{{REGISTRY}}/{{REPO_OWNER}}/{{IMAGE}}:latest" -f Dockerfile --output=type="{{OUTPUT_TYPE}}",oci-mediatypes=false --provenance=false .
+    docker buildx build --build-arg "TEDGE_IMAGE={{TEDGE_IMAGE}}" --build-arg "TEDGE_TAG={{TEDGE_TAG}}" -t "{{REGISTRY}}/{{REPO_OWNER}}/{{IMAGE}}:{{VERSION}}" -t "{{REGISTRY}}/{{REPO_OWNER}}/{{IMAGE}}:latest" -f Dockerfile --output=type="{{OUTPUT_TYPE}}",oci-mediatypes=false --provenance=false .
 
 # Install python virtual environment
 venv:
@@ -64,7 +64,7 @@ lint *ARGS:
 # Build test images
 build-test: build-test-bundles
     echo "Creating test infrastructure image"
-    docker build --load -t {{TEST_IMAGE}} -f ./test-images/{{TEST_IMAGE_SRC}}/Dockerfile .
+    [ -d "./test-images/{{TEST_IMAGE_SRC}}" ] && docker build --load -t {{TEST_IMAGE}} -f ./test-images/{{TEST_IMAGE_SRC}}/Dockerfile . || docker pull "{{TEST_IMAGE}}"
 
 build-test-bundles:
     echo "Building tedge-container-bundle images"
