@@ -22,7 +22,7 @@ Setup Device
 
     Transfer To Device    ${CURDIR}/../../test-images/common/container-bundle.sh    /usr/bin/
     Transfer To Device    ${CURDIR}/../*.tar.gz    /build/
-    Execute Command    container-bundle.sh start
+    Execute Command    container-bundle.sh start ${DEVICE_ID} ${C8Y_CONFIG.host}
 
     Set Suite Variable    ${DEVICE_ID}
     Cumulocity.External Identity Should Exist    ${DEVICE_ID}

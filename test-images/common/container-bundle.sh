@@ -106,12 +106,20 @@ start() {
 }
 
 ACTION="$1"
+shift
 
 case "$ACTION" in
     start)
+        if [ -n "$1" ]; then
+            DEVICE_ID="$1"
+        fi
+        if [ -n "$2" ]; then 
+            TEDGE_C8Y_URL=$(echo "$2" | sed 's|^https://||' | sed 's|^https://||')
+        fi
+
         build
         prepare
-        bootstrap_certificate || echo "Failed to upload certificate"
+        bootstrap_certificate
         start
         ;;
 
