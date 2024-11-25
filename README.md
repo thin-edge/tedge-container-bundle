@@ -114,3 +114,23 @@ After the project pre-requisites have been installed, you can start the containe
 * Both the initialization scripts and services have access to the container's environment variables, which makes it much easier to configure the components.
 * Standard Output and Standard Error are redirected to the PID 1 so that the log messages are visible from all services
 * Run services under the container `USER`
+
+## Contributions
+
+#### PR Submissions
+
+Contributions are welcomed, but please consider the following
+
+* Does the change make sense for other users? If the answer is no, then maybe you should be just pulling in the `tedge-container-bundle` into your own Dockerfile using `FROM ghcr.io/thin-edge/tedge-container-bundle:<tag>`
+
+* State the motivation of the change
+
+* Write a system test (under `./tests`) and ensure all tests are passing (though the CI will also run this on the PR directly)
+
+Finally, before submitting a PR you should run the following locally to ensure everything is formatted correct and there are no linting errors/warnings!
+
+```sh
+just venv
+just lint
+just format
+```
