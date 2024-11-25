@@ -1,11 +1,11 @@
 *** Settings ***
-Resource        ../resources/common.resource
-Library         DateTime
+Resource            ../resources/common.resource
+Library             DateTime
 
-Test Setup       Setup Device
-Test Teardown    Stop Device
+Test Setup          Setup Device
+Test Teardown       Stop Device
 
-Test Tags       self-update
+Test Tags           self-update
 
 
 *** Test Cases ***
@@ -16,12 +16,6 @@ Trigger self update via local command
     ...    tedge mqtt pub -r ${topic} '{"status":"init","image":"ghcr.io/thin-edge/tedge-container-bundle:99.99.1","containerName":"tedge"}'
     Cumulocity.Operation Should Be SUCCESSFUL    ${operation}
 
-    # TODO: Check the status of the operation
-    ${operation}=    Cumulocity.Execute Shell Command
-    ...    cat /data/tedge/logs/agent/workflow-self_update-local-*.log ${topic} | tail -n50 || true
-
-    ${operation}=    Cumulocity.Operation Should Be SUCCESSFUL    ${operation}
-
     ${operation}=    Cumulocity.Execute Shell Command
     ...    echo Checking MQTT messages; timeout 2 tedge mqtt sub ${topic} || true
     ${operation}=    Cumulocity.Operation Should Be SUCCESSFUL    ${operation}
@@ -31,6 +25,7 @@ Self update should only update if there is a new image
     ${operation}=    Cumulocity.Install Software
     ...    {"name": "tedge", "version": "ghcr.io/thin-edge/tedge-container-bundle:99.99.1", "softwareType": "self"}
     Cumulocity.Operation Should Be SUCCESSFUL    ${operation}
+    # robocop: disable=todo-in-comment
     # TODO: Robotframework does not provide an easy way to provide the datetime with timezone (which is required by c8y-api)
     # Cumulocity.Device Should Have Event/s    type=tedge_self_update    after=${date}    minimum=0    maximum=0
 

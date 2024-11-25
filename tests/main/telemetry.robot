@@ -1,8 +1,8 @@
 *** Settings ***
-Resource        ../resources/common.resource
+Resource            ../resources/common.resource
 
-Suite Setup     Setup Device
-Suite Teardown    Stop Device
+Suite Setup         Setup Device
+Suite Teardown      Stop Device
 
 
 *** Test Cases ***
