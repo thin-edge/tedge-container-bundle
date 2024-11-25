@@ -33,7 +33,6 @@ jobs:
     env:
       COMPOSE_PROJECT_NAME: ci_${{ matrix.job.image }}_${{github.run_id}}_${{github.run_attempt || '1'}}
       TEST_IMAGE: ${{ matrix.job.image }}
-      TEST_IMAGE_SRC: ${{ matrix.job.image }}
 
     strategy:
       fail-fast: false

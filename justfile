@@ -14,7 +14,6 @@ RELEASE_VERSION := env_var_or_default("RELEASE_VERSION", `date +'%Y%m%d.%H%M'`)
 
 # Test Variables
 TEST_IMAGE := env_var_or_default("TEST_IMAGE", "debian-systemd-docker-cli")
-TEST_IMAGE_SRC := env_var_or_default("TEST_IMAGE_SRC", "debian-systemd-docker-cli")
 
 
 # Initialize a dotenv file for usage with a local debugger
@@ -23,7 +22,6 @@ init-dotenv:
   @echo "Recreating .env file..."
   @echo "DEVICE_ID=$DEVICE_ID" > .env
   @echo "TEST_IMAGE=$IMAGE" >> .env
-  @echo "TEST_IMAGE_SRC=$IMAGE_SRC" >> .env
   @echo "C8Y_BASEURL=$C8Y_BASEURL" >> .env
   @echo "C8Y_USER=$C8Y_USER" >> .env
   @echo "C8Y_PASSWORD=$C8Y_PASSWORD" >> .env
@@ -64,7 +62,7 @@ lint *ARGS:
 # Build test images
 build-test: build-test-bundles
     echo "Creating test infrastructure image"
-    [ -d "./test-images/{{TEST_IMAGE_SRC}}" ] && docker build --load -t {{TEST_IMAGE}} -f ./test-images/{{TEST_IMAGE_SRC}}/Dockerfile . || docker pull "{{TEST_IMAGE}}"
+    [ -d "./test-images/{{TEST_IMAGE}}" ] && docker build --load -t {{TEST_IMAGE}} -f ./test-images/{{TEST_IMAGE}}/Dockerfile . || docker pull "{{TEST_IMAGE}}"
 
 build-test-bundles:
     echo "Building tedge-container-bundle images"

@@ -44,7 +44,7 @@ TEDGE_C8Y_OPERATIONS_AUTO_LOG_UPLOAD=always
 
 #### Testing
 
-The system tests are writing using the [RobotFramework](https://robotframework.org/) with some custom thin-edge.io libraries. Generally the test framework will spin up a new container engine environment (defined by the `TEST_IMAGE` and `TEST_IMAGE_SRC` variables). In the test itself, a new instance of the **tedge-container-bundle** will be created which the test then uses to check the specified functionality. Using this setup does bring a but if complexity into the setup, however it is necessary to ensure that the **tedge-container-bundle** can be tested against multiple container engine environments (e.g. docker, podman and different versions of each), whilst it also provides a test environment which does not pollute your host's container engine environment.
+The system tests are writing using the [RobotFramework](https://robotframework.org/) with some custom thin-edge.io libraries. Generally the test framework will spin up a new container engine environment (defined by the `TEST_IMAGE` variable). In the test itself, a new instance of the **tedge-container-bundle** will be created which the test then uses to check the specified functionality. Using this setup does bring a but if complexity into the setup, however it is necessary to ensure that the **tedge-container-bundle** can be tested against multiple container engine environments (e.g. docker, podman and different versions of each), whilst it also provides a test environment which does not pollute your host's container engine environment.
 
 The following tools are required to run the tests:
 
