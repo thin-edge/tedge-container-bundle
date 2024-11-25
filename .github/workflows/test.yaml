@@ -10,8 +10,6 @@ on:
   pull_request_target:
     branches: [ main ]
   merge_group:
-  push:
-    branches: [ test-isolated-tests ]
 jobs:
   approve:
     name: Approve
