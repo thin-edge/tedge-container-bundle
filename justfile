@@ -4,7 +4,6 @@ set export
 IMAGE := "tedge-container-bundle"
 TEDGE_IMAGE := "tedge"
 TEDGE_TAG := "1.3.1"
-ENV_FILE := ".env"
 
 REGISTRY := "ghcr.io"
 REPO_OWNER := "thin-edge"
@@ -13,14 +12,13 @@ DEFAULT_OUTPUT_TYPE := "registry,dest=" + IMAGE + ".tar"
 RELEASE_VERSION := env_var_or_default("RELEASE_VERSION", `date +'%Y%m%d.%H%M'`)
 
 # Test Variables
-TEST_IMAGE := env_var_or_default("TEST_IMAGE", "debian-systemd-docker-cli")
+TEST_IMAGE := env_var_or_default("TEST_IMAGE", "docker:27-dind")
 
 
 # Initialize a dotenv file for usage with a local debugger
 # WARNING: It will override any previously generated dotenv file
 init-dotenv:
   @echo "Recreating .env file..."
-  @echo "DEVICE_ID=$DEVICE_ID" > .env
   @echo "TEST_IMAGE=$IMAGE" >> .env
   @echo "C8Y_BASEURL=$C8Y_BASEURL" >> .env
   @echo "C8Y_USER=$C8Y_USER" >> .env
@@ -37,7 +35,7 @@ build-setup:
 # Example:
 #    just build registry latest
 #    just build registry 1.2.0
-# Use oci-mediatypes=false to improve compatibility with older docker verions, e.g. <= 19.0.x
+# Use oci-mediatypes=false to improve compatibility with older docker versions, e.g. <= 19.0.x
 # See https://github.com/docker/buildx/issues/1964#issuecomment-1644634461
 build OUTPUT_TYPE=DEFAULT_OUTPUT_TYPE VERSION='latest': build-setup
     docker buildx build --build-arg "TEDGE_IMAGE={{TEDGE_IMAGE}}" --build-arg "TEDGE_TAG={{TEDGE_TAG}}" -t "{{REGISTRY}}/{{REPO_OWNER}}/{{IMAGE}}:{{VERSION}}" -t "{{REGISTRY}}/{{REPO_OWNER}}/{{IMAGE}}:latest" -f Dockerfile --output=type="{{OUTPUT_TYPE}}",oci-mediatypes=false --provenance=false .

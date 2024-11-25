@@ -31,7 +31,6 @@ jobs:
     environment:
       name: Test Auto
     env:
-      COMPOSE_PROJECT_NAME: ci_${{ matrix.job.image }}_${{github.run_id}}_${{github.run_attempt || '1'}}
       TEST_IMAGE: ${{ matrix.job.image }}
 
     strategy:
@@ -68,14 +67,9 @@ jobs:
         run: |
           touch .env
 
-          echo "DEVICE_ID=$DEVICE_ID" >> .env
           echo 'C8Y_BASEURL="${{ secrets.C8Y_BASEURL }}"' >> .env
-          C8Y_DOMAIN=$(echo "${{ secrets.C8Y_BASEURL }}" | sed 's|.*://||g')
           echo 'C8Y_USER="${{ secrets.C8Y_USER }}"' >> .env
           echo 'C8Y_PASSWORD="${{ secrets.C8Y_PASSWORD }}"' >> .env
-
-          # env variables required by the container
-          echo "TEDGE_C8Y_URL=$C8Y_DOMAIN" >> .env
           cat .env
 
       - uses: actions/setup-python@v5
