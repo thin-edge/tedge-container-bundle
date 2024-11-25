@@ -2,8 +2,8 @@
 Resource        ../resources/common.resource
 Library         DateTime
 
-Suite Setup     Setup Device
-Suite Teardown    Stop Device
+Test Setup       Setup Device
+Test Teardown    Stop Device
 
 Test Tags       self-update
 
@@ -26,7 +26,6 @@ Trigger self update via local command
     ...    echo Checking MQTT messages; timeout 2 tedge mqtt sub ${topic} || true
     ${operation}=    Cumulocity.Operation Should Be SUCCESSFUL    ${operation}
     Should Contain    ${operation["c8y_Command"]["result"]}    "status":"successful"
-    [Teardown]    Clear Local Operation    ${topic}
 
 Self update should only update if there is a new image
     ${operation}=    Cumulocity.Install Software
@@ -46,17 +45,15 @@ Self update using software update operation
     Cumulocity.Operation Should Be SUCCESSFUL    ${operation}    timeout=120
     Device Should Have Installed Software
     ...    {"name": "tedge", "version": "tedge-container-bundle:99.99.2", "softwareType": "self"}
-    [Teardown]    Collect Log Files
 
+Rollback when trying to install a non-tedge based image
+    # pre-condition
+    Device Should Have Installed Software
+    ...    {"name": "tedge", "version": "tedge-container-bundle:99.99.1", "softwareType": "self"}    timeout=10
 
-*** Keywords ***
-Clear Local Operation
-    [Arguments]    ${topic}
-    ${operation}=    Cumulocity.Execute Shell Command    tedge mqtt pub -r ${topic} ''
-    ${operation}=    Cumulocity.Operation Should Be DONE    ${operation}
+    ${operation}=    Cumulocity.Install Software
+    ...    {"name": "tedge", "version": "docker.io/library/alpine:latest", "softwareType": "self"}
 
-Collect Log Files
-    ${operation}=    Cumulocity.Execute Shell Command
-    ...    find /data/tedge/logs/agent/ -type f -name "workflow-software_update*.log" -exec ls -t1 {} + | head -1 | xargs tail -c 15000
-    ${operation}=    Cumulocity.Operation Should Be SUCCESSFUL    ${operation}
-    Log    ${operation["c8y_Command"]["result"]}
+    Cumulocity.Operation Should Be FAILED    ${operation}    timeout=120
+    Device Should Have Installed Software
+    ...    {"name": "tedge", "version": "tedge-container-bundle:99.99.1", "softwareType": "self"}
