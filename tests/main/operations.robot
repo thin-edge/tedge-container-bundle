@@ -1,17 +1,16 @@
 *** Settings ***
-Resource        ../resources/common.resource
-Library         DateTime
-Library         Cumulocity
-Library         DeviceLibrary
+Resource            ../resources/common.resource
+Library             DateTime
 
-Suite Setup     Set Main Device
+Suite Setup         Setup Device
+Suite Teardown      Stop Device
 
 
 *** Test Cases ***
 Grace period to allow container to startup
     Sleep    5s    reason=Wait for container to startup
 
-tedge-container-plugin service is up
+Service is up
     Cumulocity.Should Have Services    name=tedge-container-plugin    status=up    max_count=1
 
 Restart device
@@ -45,11 +44,16 @@ Install application using docker compose
     ${software}=    Device Should Have Installed Software
     ...    {"name": "nodered-instance1", "version": "1.0.0", "softwareType": "container-group"}
 
-    Cumulocity.Should Have Services    service_type=container-group    name=nodered-instance1@node-red    status=up    max_count=1
+    Cumulocity.Should Have Services
+    ...    service_type=container-group
+    ...    name=nodered-instance1@node-red
+    ...    status=up
+    ...    max_count=1
 
 Get Container Logs
     ${operation}=    Cumulocity.Get Log File    container    search_text=tedge    maximum_lines=100
     Cumulocity.Operation Should Be SUCCESSFUL    ${operation}
+
 
 *** Keywords ***
 Get Configuration File

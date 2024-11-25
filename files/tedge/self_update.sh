@@ -49,14 +49,14 @@ prepare() {
     # Use container id to prevent any unexpected changes
     if [ -z "$CURRENT_CONTAINER_ID" ]; then
         log "Reading container configuration by name. name=$CONTAINER_NAME"
-        CURRENT_CONTAINER_ID=$($DOCKER_CMD inspect "$CONTAINER_NAME" --format "{{.Id}}" ||:)
+        CURRENT_CONTAINER_ID=$($DOCKER_CMD container inspect "$CONTAINER_NAME" --format "{{.Id}}" ||:)
     else
         log "Reading container configuration by id. id=$CURRENT_CONTAINER_ID"
     fi
-    CURRENT_CONTAINER_CONFIG_IMAGE=$($DOCKER_CMD inspect "$CURRENT_CONTAINER_ID" --format "{{.Config.Image}}" ||:)
+    CURRENT_CONTAINER_CONFIG_IMAGE=$($DOCKER_CMD container inspect "$CURRENT_CONTAINER_ID" --format "{{.Config.Image}}" ||:)
 
     if [ -z "$IMAGE" ]; then
-        value=$($DOCKER_CMD inspect "$CURRENT_CONTAINER_ID" --format "{{.Config.Image}}" ||:)
+        value=$($DOCKER_CMD container inspect "$CURRENT_CONTAINER_ID" --format "{{.Config.Image}}" ||:)
         if [ -n "$value" ]; then
             IMAGE="$value"
             log "Detected container image from container. id=$CURRENT_CONTAINER_ID, image=$value"
@@ -65,8 +65,8 @@ prepare() {
 }
 
 needs_update() {
-    CURRENT_IMAGE_ID=$($DOCKER_CMD inspect "$CURRENT_CONTAINER_ID" --format "{{.Image}}" ||:)
-    CURRENT_IMAGE_NAME=$($DOCKER_CMD inspect "$CURRENT_CONTAINER_ID" --format "{{.Config.Image}}" ||:)
+    CURRENT_IMAGE_ID=$($DOCKER_CMD container inspect "$CURRENT_CONTAINER_ID" --format "{{.Image}}" ||:)
+    CURRENT_IMAGE_NAME=$($DOCKER_CMD container inspect "$CURRENT_CONTAINER_ID" --format "{{.Config.Image}}" ||:)
     log "Current container. imageId=$CURRENT_IMAGE_ID, imageName=$CURRENT_IMAGE_NAME"
 
     case "${1:-}" in
@@ -103,7 +103,7 @@ needs_update() {
 }
 
 is_container_running() {
-    IS_RUNNING=$($DOCKER_CMD inspect "$1" --format "{{.State.Running}}" 2>/dev/null ||:)
+    IS_RUNNING=$($DOCKER_CMD container inspect "$1" --format "{{.State.Running}}" 2>/dev/null ||:)
     [ "$IS_RUNNING" = true ]
 }
 
@@ -144,7 +144,9 @@ generate_run_command_from_container() {
     container_spec="$1"
     image="$2"
 
-    # Use first existing tmeplate
+    # trim any leading / as it is not supported by podman
+    name=$($DOCKER_CMD container inspect "$container_spec" --format "{{.Name}}" | tr -d '/')
+
     # Include looking for template locally to make it easier to run locally during development
     RUN_TEMPLATE=$(
         read_container_run_template \
@@ -152,12 +154,12 @@ generate_run_command_from_container() {
             "$SCRIPT_DIR/container_run.tpl"
     )
 
-    RUN_OPTIONS=$($DOCKER_CMD inspect "$container_spec" --format "$RUN_TEMPLATE")
+    RUN_OPTIONS=$($DOCKER_CMD container inspect "$container_spec" --format "$RUN_TEMPLATE")
     RUN_SCRIPT_CONTENTS=$(
         cat <<EOT
 #!/bin/sh
 set -e
-$DOCKER_CMD run -d \\$RUN_OPTIONS
+$DOCKER_CMD run -d --name "$name" \\$RUN_OPTIONS
   $image
 EOT
     )
@@ -192,7 +194,7 @@ update() {
     RUN_SCRIPT=$(generate_run_command_from_container "$CURRENT_CONTAINER_ID" "$IMAGE")
 
     # remove any existing backup-name
-    if $DOCKER_CMD inspect "$BACKUP_CONTAINER_NAME" >/dev/null 2>&1; then
+    if $DOCKER_CMD container inspect "$BACKUP_CONTAINER_NAME" >/dev/null 2>&1; then
         $DOCKER_CMD stop "$BACKUP_CONTAINER_NAME" >/dev/null ||:
         $DOCKER_CMD rm "$BACKUP_CONTAINER_NAME" >/dev/null ||:
     fi
@@ -212,7 +214,7 @@ update() {
 is_functional() {
     container_id="$1"
     # Check container state
-    IS_RUNNING=$($DOCKER_CMD inspect "$container_id" --format "{{.State.Running}}" 2>/dev/null ||:)
+    IS_RUNNING=$($DOCKER_CMD container inspect "$container_id" --format "{{.State.Running}}" 2>/dev/null ||:)
     if [ "$IS_RUNNING" != true ]; then
         return "$FAILED"
     fi
@@ -236,7 +238,7 @@ is_functional() {
         fi
     fi
 
-    CONTAINER_IMAGE=$($DOCKER_CMD inspect "$container_id" --format "{{.Image}}")
+    CONTAINER_IMAGE=$($DOCKER_CMD container inspect "$container_id" --format "{{.Image}}")
     log "New image: $CONTAINER_IMAGE"
 
     return "$OK"
@@ -267,7 +269,7 @@ healthcheck() {
 rollback() {
     log "Rolling back container. name=$CONTAINER_NAME (unhealthy)"
 
-    if ! $DOCKER_CMD inspect "$BACKUP_CONTAINER_NAME" >/dev/null 2>&1; then
+    if ! $DOCKER_CMD container inspect "$BACKUP_CONTAINER_NAME" >/dev/null 2>&1; then
         # Don't do anything if the backup does not exist, as a broken container is better then no container!
         log "ERROR: Could not rollback container as the backup no longer exists! This is unexpected. name=$BACKUP_CONTAINER_NAME"
         exit 1
@@ -278,13 +280,13 @@ rollback() {
 
     log "Collecting logs from the unhealthy container. name=$CONTAINER_NAME"
     log "----- Start of unhealthy container logs -----"
-    $DOCKER_CMD logs "$CONTAINER_NAME" -n 500 >&2 ||:
+    $DOCKER_CMD logs "$CONTAINER_NAME" --tail 500 >&2 ||:
     log "----- End of unhealthy container logs -----"
     $DOCKER_CMD rm "$CONTAINER_NAME" ||:
 
     log "Restoring container from backup. name=$BACKUP_CONTAINER_NAME (new name will be $CONTAINER_NAME)"
     $DOCKER_CMD container rename "$BACKUP_CONTAINER_NAME" "$CONTAINER_NAME"
-    $DOCKER_CMD container update "$CONTAINER_NAME" --restart always
+
     $DOCKER_CMD start "$CONTAINER_NAME" ||:
 
     log "Performing a healthcheck on the restored container (for information purposes only)"
@@ -326,7 +328,7 @@ update_background() {
     # shellcheck disable=SC2086
     set -- $OPTIONS
 
-    if $DOCKER_CMD inspect "$UPDATER_CONTAINER_NAME" >/dev/null 2>&1; then
+    if $DOCKER_CMD container inspect "$UPDATER_CONTAINER_NAME" >/dev/null 2>&1; then
         log "Removing old updater container. name=$UPDATER_CONTAINER_NAME"
         $DOCKER_CMD stop "$UPDATER_CONTAINER_NAME" 2>/dev/null ||:
         $DOCKER_CMD rm "$UPDATER_CONTAINER_NAME" 2>/dev/null ||:
@@ -340,10 +342,6 @@ update_background() {
     )
     log "Updater container. id=$UPDATER_CONTAINER_ID, name=$UPDATER_CONTAINER_NAME"
 
-    # Set the container to restart (but only after the background service was launched successfully)
-    log "Setting restart policy to no for existing container"
-    $DOCKER_CMD container update "${CURRENT_CONTAINER_ID}" --restart no
-
     # wait for service to start and be stable
     sleep 5
 
@@ -354,11 +352,15 @@ update_background() {
 
     # Give some time for the message to be published
     sleep 5
+
+    # Stop the previous container
+    log "Stopping the container (due to podman < 5.1 limitation)"
+    $DOCKER_CMD container stop "${CURRENT_CONTAINER_ID}"
 }
 
 collect_update_logs() {
     # Collect updater container logs
-    if $DOCKER_CMD inspect "$UPDATER_CONTAINER_NAME" >/dev/null 2>&1; then
+    if $DOCKER_CMD container inspect "$UPDATER_CONTAINER_NAME" >/dev/null 2>&1; then
 
         log "Waiting for updater container to stop (if it is running). name=$UPDATER_CONTAINER_NAME"
         if ! wait_for_stop "$UPDATER_CONTAINER_NAME"; then
@@ -367,7 +369,7 @@ collect_update_logs() {
 
         log "Collecting updater container logs. name=$UPDATER_CONTAINER_NAME"
         log "----- Start of updater logs -----"
-        $DOCKER_CMD logs "$UPDATER_CONTAINER_NAME" -n 500 >&2 ||:
+        $DOCKER_CMD logs "$UPDATER_CONTAINER_NAME" --tail 500 >&2 ||:
         log "----- End of updater logs -----"
     else
         log "Updater container does not exist so no logs to collect. name=$UPDATER_CONTAINER_NAME"

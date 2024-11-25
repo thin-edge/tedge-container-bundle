@@ -42,35 +42,21 @@ TEDGE_C8Y_OPERATIONS_AUTO_LOG_UPLOAD=always
 
 ### Development
 
-#### Starting the container
+#### Testing
 
-The following tools are required to run the container:
+The system tests are writing using the [RobotFramework](https://robotframework.org/) with some custom thin-edge.io libraries. Generally the test framework will spin up a new container engine environment (defined by the `TEST_IMAGE` variable). In the test itself, a new instance of the **tedge-container-bundle** will be created which the test then uses to check the specified functionality. Using this setup does bring a but if complexity into the setup, however it is necessary to ensure that the **tedge-container-bundle** can be tested against multiple container engine environments (e.g. docker, podman and different versions of each), whilst it also provides a test environment which does not pollute your host's container engine environment.
+
+The following tools are required to run the tests:
 
 * docker
-* docker compose
+* [docker-buildx-plugin](https://github.com/docker/buildx)
+* [go-c8y-cli](https://goc8ycli.netlify.app/)
 * Optional: [just](https://github.com/casey/just) - used to run project tasks
+* python >= 3.9
 
 After the project pre-requisites have been installed, you can start the container using the following steps:
 
-1. Create a `.env` file containing the environment variables (see the [Providing the device certificate by environment variables](./README.md#providing-the-device-certificate-by-environment-variables) for details on how to provide the device certificate)
-
-    ```sh
-    # device id to use for the certificate
-    DEVICE_ID=demo01
-
-    # Which c8y instance you want to connect to
-    TEDGE_C8Y_URL=example.cumulocity.com
-
-    # You can turn specific services on/off via environment variables
-    SERVICE_TEDGE_MAPPER_AWS=0
-    SERVICE_TEDGE_MAPPER_AZ=0
-    SERVICE_TEDGE_MAPPER_C8Y=1
-
-    # Other settings
-    TEDGE_C8Y_OPERATIONS_AUTO_LOG_UPLOAD=always
-    ```
-
-2. Activate your Cumulocity session using go-c8y-cli
+1. First run only: Activate your Cumulocity session using [go-c8y-cli](https://goc8ycli.netlify.app/docs/gettingstarted/#creating-a-new-session)
 
     ```sh
     set-session
@@ -87,22 +73,32 @@ After the project pre-requisites have been installed, you can start the containe
     set-session
     ```
 
-3. Init the device certificate (stored in a container volume) and upload it to Cumulocity IoT
+2. Create a `.env` file containing the environment variables used for testing
 
     ```sh
-    just init
+    just init-dotenv
     ```
 
-4. Start the container (using docker compose)
+    **Note** This will write your current go-c8y-cli's session credentials to the `.env` file, so you don't need to use `set-session` every time.
+
+3. Initialize the docker setup and install the python virtual environment
 
     ```sh
-    # using the justfile task
-    just start
-
-    # Or using docker compose directly
-    docker compose up --build
+    just build-setup
+    just venv
     ```
 
+4. Build test images
+
+    ```sh
+    just build-test
+    ```
+
+5. Run system tests
+
+    ```sh
+    just test
+    ```
 
 ## Project structure
 
@@ -118,3 +114,23 @@ After the project pre-requisites have been installed, you can start the containe
 * Both the initialization scripts and services have access to the container's environment variables, which makes it much easier to configure the components.
 * Standard Output and Standard Error are redirected to the PID 1 so that the log messages are visible from all services
 * Run services under the container `USER`
+
+## Contributions
+
+#### PR Submissions
+
+Contributions are welcomed, but please consider the following
+
+* Does the change make sense for other users? If the answer is no, then maybe you should be just pulling in the `tedge-container-bundle` into your own Dockerfile using `FROM ghcr.io/thin-edge/tedge-container-bundle:<tag>`
+
+* State the motivation of the change
+
+* Write a system test (under `./tests`) and ensure all tests are passing (though the CI will also run this on the PR directly)
+
+Finally, before submitting a PR you should run the following locally to ensure everything is formatted correct and there are no linting errors/warnings!
+
+```sh
+just venv
+just lint
+just format
+```

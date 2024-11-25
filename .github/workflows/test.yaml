@@ -23,25 +23,37 @@ jobs:
         run: echo "Approved"
 
   test:
-    name: Test ${{ matrix.job.target }}
+    name: Test ${{ matrix.job.name }}
     runs-on: ubuntu-latest
     needs: approve
     environment:
       name: Test Auto
     env:
-      COMPOSE_PROJECT_NAME: ci_${{ matrix.job.target }}_${{github.run_id}}_${{github.run_attempt || '1'}}
-      DEVICE_ID: ci_${{ matrix.job.target }}_${{github.run_id}}_${{github.run_attempt || '1'}}
+      TEST_IMAGE: ${{ matrix.job.image }}
 
     strategy:
       fail-fast: false
       matrix:
         job:
-          - { target: tedge-container-bundle }
+          # docker
+          - { target: tedge-container-bundle, name: "docker v27", image: "docker:27-dind" }
+          - { target: tedge-container-bundle, name: "docker v26", image: "docker:26-dind" }
+          - { target: tedge-container-bundle, name: "docker v25", image: "docker:25-dind" }
+          - { target: tedge-container-bundle, name: "docker v20", image: "docker:20-dind" }
+          # podman
+          - { target: tedge-container-bundle, name: "podman", image: debian-systemd-podman-cli }
+          - { target: tedge-container-bundle, name: "podman v5", image: "podman-v5" }
+          # - { target: tedge-container-bundle, name: "podman v4", image: "podman-v4" }
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event_name == 'pull_request_target' && github.event.pull_request.head.sha || '' }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          install: true
 
       - uses: taiki-e/install-action@just
 
@@ -53,19 +65,10 @@ jobs:
         run: |
           touch .env
 
-          echo "DEVICE_ID=$DEVICE_ID" >> .env
           echo 'C8Y_BASEURL="${{ secrets.C8Y_BASEURL }}"' >> .env
-          C8Y_DOMAIN=$(echo "${{ secrets.C8Y_BASEURL }}" | sed 's|.*://||g')
           echo 'C8Y_USER="${{ secrets.C8Y_USER }}"' >> .env
           echo 'C8Y_PASSWORD="${{ secrets.C8Y_PASSWORD }}"' >> .env
-
-          # env variables required by the container
-          echo "TEDGE_C8Y_URL=$C8Y_DOMAIN" >> .env
           cat .env
-
-      - name: Bootstrap device
-        run: |
-          just init
 
       - uses: actions/setup-python@v5
         with:
@@ -77,10 +80,7 @@ jobs:
       - name: Install dependencies
         run: |
           just venv
-
-      - name: Start demo
-        run: |
-          just start -d
+          just build-test
 
       - name: Run tests
         run: just test
@@ -89,17 +89,8 @@ jobs:
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: reports
+          name: reports-${{ matrix.job.name }}
           path: output
-
-      - name: Stop demo
-        if: always()
-        run: just stop -v
-
-      - name: Cleanup Devices
-        if: always()
-        run: |
-          just cleanup "$DEVICE_ID"
 
       - name: Send report to commit
         uses: joonvena/robotframework-reporter-action@v2.5

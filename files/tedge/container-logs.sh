@@ -68,13 +68,13 @@ TMP_FILE="${TMP_LOG_DIR}/${TYPE}_${CONTAINER_NAME}_$(date -Iseconds).log"
     echo "dateFrom:   $DATE_FROM"
     echo "dateTo:     $DATE_TO"
     echo "maxLines:   $MAX_LINES"
-    echo "command:    $DOCKER_CMD logs -n \"$MAX_LINES\" --since \"$DATE_FROM\" --until \"$DATE_TO\" \"$CONTAINER_NAME\""
+    echo "command:    $DOCKER_CMD logs --tail \"$MAX_LINES\" --since \"$DATE_FROM\" --until \"$DATE_TO\" \"$CONTAINER_NAME\""
     echo "------------------------------------------------------"
     echo
 } > "$TMP_FILE"
 
 # Write logs to file (stripping any ansci colour codes)
-$DOCKER_CMD logs -n "$MAX_LINES" --since "$DATE_FROM" --until "$DATE_TO" "$CONTAINER_NAME" 2>&1 \
+$DOCKER_CMD logs --tail "$MAX_LINES" --since "$DATE_FROM" --until "$DATE_TO" "$CONTAINER_NAME" 2>&1 \
     | sed -e 's/\x1b\[[0-9;]*m//g' \
     | tee -a "$TMP_FILE"
 
