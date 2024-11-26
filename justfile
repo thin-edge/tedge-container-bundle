@@ -30,16 +30,29 @@ build-setup:
     docker buildx install
     docker run --privileged --rm tonistiigi/binfmt --install all
 
-
-# Build the docker images
-# Example:
-#    just build registry latest
-#    just build registry 1.2.0
-# Use oci-mediatypes=false to improve compatibility with older docker versions, e.g. <= 19.0.x
-# See https://github.com/docker/buildx/issues/1964#issuecomment-1644634461
+# Build docker images (for testing)
 build OUTPUT_TYPE=DEFAULT_OUTPUT_TYPE VERSION='latest': build-setup
     docker buildx build \
+        --label "org.opencontainers.image.version={{VERSION}}" \
+        --build-arg "TEDGE_IMAGE={{TEDGE_IMAGE}}" \
+        --build-arg "TEDGE_TAG={{TEDGE_TAG}}" \
+        -t "{{REGISTRY}}/{{REPO_OWNER}}/{{IMAGE}}:{{VERSION}}" \
+        -t "{{REGISTRY}}/{{REPO_OWNER}}/{{IMAGE}}:latest" \
+        -f Dockerfile \
+        --output=type="{{OUTPUT_TYPE}}",oci-mediatypes=false \
+        --provenance=false \
+        .
+
+# Publish docker images (multi-arch)
+# Example:
+#    just publish registry latest
+#    just publish registry 1.2.0
+# Use oci-mediatypes=false to improve compatibility with older docker versions, e.g. <= 19.0.x
+# See https://github.com/docker/buildx/issues/1964#issuecomment-1644634461
+publish OUTPUT_TYPE=DEFAULT_OUTPUT_TYPE VERSION='latest': build-setup
+    docker buildx build \
         --platform linux/arm/v6,linux/arm/v7,linux/amd64,linux/arm64 \
+        --label "org.opencontainers.image.version={{VERSION}}" \
         --build-arg "TEDGE_IMAGE={{TEDGE_IMAGE}}" \
         --build-arg "TEDGE_TAG={{TEDGE_TAG}}" \
         -t "{{REGISTRY}}/{{REPO_OWNER}}/{{IMAGE}}:{{VERSION}}" \
