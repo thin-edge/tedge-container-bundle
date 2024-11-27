@@ -42,41 +42,49 @@ while [ $# -gt 0 ]; do
     shift
 done
 
-DOCKER_CMD=docker
-if ! docker ps >/dev/null 2>&1; then
-    if command -V sudo >/dev/null 2>&1; then
-        DOCKER_CMD="sudo docker"
-    fi
+SUDO=
+if command -V sudo >/dev/null 2>&1; then
+    SUDO="sudo"
 fi
+LOGS_CMD="$SUDO tedge-container tools container-logs"
 
 CONTAINER_NAME=${CONTAINER_NAME:-}
+
 if [ -z "$CONTAINER_NAME" ]; then
-    # Use the name of the container rather than the hostname as it human friendly
-    # and strip any leading slash (/)
-    CONTAINER_NAME=$($DOCKER_CMD inspect "$(hostname)" --format "{{.Name}}" | sed 's|^/||g')
+    # Lookup current container name so it can be included in the log header (though technically it isn't needed)
+    CONTAINER_NAME=$($SUDO tedge-container self list 2>/dev/null | head -n1 | cut -f1)
 fi
 
 TMP_LOG_DIR=$(mktemp -d)
 # Ensure directory is always deleted afterwards
 trap 'rm -rf -- "$TMP_LOG_DIR"' EXIT
-TMP_FILE="${TMP_LOG_DIR}/${TYPE}_${CONTAINER_NAME}_$(date -Iseconds).log"
+TMP_FILE="${TMP_LOG_DIR}/${TYPE}_${CONTAINER_NAME}_$(date +%Y-%m-%dT%H:%M:%S%z).log"
 
 # Add log header to give information about the contents
 {
     echo "---------------- log parameters ----------------------"
-    echo "container:  $CONTAINER_NAME"
+    echo "container:  ${CONTAINER_NAME:-current_container}"
     echo "dateFrom:   $DATE_FROM"
     echo "dateTo:     $DATE_TO"
     echo "maxLines:   $MAX_LINES"
-    echo "command:    $DOCKER_CMD logs --tail \"$MAX_LINES\" --since \"$DATE_FROM\" --until \"$DATE_TO\" \"$CONTAINER_NAME\""
+    echo "command:    $LOGS_CMD --tail \"$MAX_LINES\" --since \"$DATE_FROM\" --until \"$DATE_TO\" \"$CONTAINER_NAME\""
     echo "------------------------------------------------------"
     echo
 } > "$TMP_FILE"
 
-# Write logs to file (stripping any ansci colour codes)
-$DOCKER_CMD logs --tail "$MAX_LINES" --since "$DATE_FROM" --until "$DATE_TO" "$CONTAINER_NAME" 2>&1 \
+# Write logs to file (stripping any ansi codes)
+# Since we're in posix shell, we can't use -o pipefail, so instead we have to
+# use a marker file which exists when an error was encountered as outlined here: https://www.shellcheck.net/wiki/SC3040
+LOG_FAILED="$TMP_LOG_DIR/failed"
+# shellcheck disable=SC2086
+{ $LOGS_CMD --tail "$MAX_LINES" --since "$DATE_FROM" --until "$DATE_TO" $CONTAINER_NAME 2>&1 || echo > "$LOG_FAILED"; } \
     | sed -e 's/\x1b\[[0-9;]*m//g' \
     | tee -a "$TMP_FILE"
+
+if [ -f "$LOG_FAILED" ]; then
+    echo "Failed to get container logs" >&2
+    exit 1
+fi
 
 echo "Uploading log file to $UPLOAD_URL" >&2
 
