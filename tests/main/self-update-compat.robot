@@ -18,6 +18,13 @@ Upgrade From Base Image
     [Arguments]    ${IMAGE}    ${SOFTWARE_VERSION}
     # pre-condition
     Setup Device    image=${IMAGE}
+
+    ${major_version}=    Execute Command
+    ...    podman --version | cut -d' ' -f3 | cut -d. -f1
+    ...    ignore_exit_code=${True}
+    ...    strip=${True}
+    Skip If    '${major_version}' == '4'    Legacy images didn't support podman 4.x
+
     Device Should Have Installed Software
     ...    {"name": "tedge", "version": "${SOFTWARE_VERSION}", "softwareType": "self"}    timeout=10
 
