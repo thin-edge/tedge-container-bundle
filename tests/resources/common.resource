@@ -18,11 +18,13 @@ Library     DeviceLibrary    bootstrap_script=/dev/null
 
 *** Keywords ***
 Setup Device
+    [Arguments]    ${image}=
     ${DEVICE_ID}=    DeviceLibrary.Setup    skip_bootstrap=${True}
 
     Transfer To Device    ${CURDIR}/../../test-images/common/container-bundle.sh    /usr/bin/
     Transfer To Device    ${CURDIR}/../*.tar.gz    /build/
-    Execute Command    container-bundle.sh start --device-id '${DEVICE_ID}' --c8y-url '${C8Y_CONFIG.host}' --debug 2>&1
+    Execute Command
+    ...    container-bundle.sh start --device-id '${DEVICE_ID}' --c8y-url '${C8Y_CONFIG.host}' --image "${image}" --debug 2>&1
 
     Set Suite Variable    ${DEVICE_ID}
     Cumulocity.External Identity Should Exist    ${DEVICE_ID}

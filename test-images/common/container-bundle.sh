@@ -28,7 +28,9 @@ while [ $# -gt 0 ]; do
             shift
             ;;
         --image)
-            IMAGE="$2"
+            if [ -n "$2" ]; then
+                IMAGE="$2"
+            fi
             shift
             ;;
         --debug)
