@@ -1,6 +1,6 @@
 *** Settings ***
 Library     Cumulocity
-Library     DeviceLibrary    bootstrap_script=start-container-bundle.sh
+Library     DeviceLibrary    bootstrap_script=/dev/null
 
 
 *** Variables ***
@@ -22,11 +22,11 @@ Setup Device
 
     Transfer To Device    ${CURDIR}/../../test-images/common/container-bundle.sh    /usr/bin/
     Transfer To Device    ${CURDIR}/../*.tar.gz    /build/
-    Execute Command    container-bundle.sh start ${DEVICE_ID} ${C8Y_CONFIG.host}
+    Execute Command    container-bundle.sh start --device-id '${DEVICE_ID}' --c8y-url '${C8Y_CONFIG.host}' --debug 2>&1
 
     Set Suite Variable    ${DEVICE_ID}
     Cumulocity.External Identity Should Exist    ${DEVICE_ID}
 
 Stop Device
-    DeviceLibrary.Execute Command    container-bundle.sh stop
+    DeviceLibrary.Execute Command    container-bundle.sh stop --device-id '${DEVICE_ID}' --debug
     Cumulocity.Delete Managed Object And Device User    ${DEVICE_ID}

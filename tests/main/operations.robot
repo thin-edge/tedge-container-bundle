@@ -54,6 +54,14 @@ Get Container Logs
     ${operation}=    Cumulocity.Get Log File    container    search_text=tedge    maximum_lines=100
     Cumulocity.Operation Should Be SUCCESSFUL    ${operation}
 
+Get Container Logs without explicit container name
+    ${operation}=    Cumulocity.Get Log File    container    maximum_lines=100
+    Cumulocity.Operation Should Be SUCCESSFUL    ${operation}
+
+Get Container Logs For Non-existent container
+    ${operation}=    Cumulocity.Get Log File    container    search_text=does-not-exist    maximum_lines=100
+    Cumulocity.Operation Should Be Failed    ${operation}
+
 
 *** Keywords ***
 Get Configuration File

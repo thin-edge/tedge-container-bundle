@@ -91,7 +91,7 @@ build-test-bundles:
 
 # Run tests
 test *ARGS='':
-    ./.venv/bin/python3 -m robot.run --outputdir output {{ARGS}} tests
+    ./.venv/bin/python3 -m robot.run --listener RetryFailed --outputdir output {{ARGS}} tests
 
 # Run self-update tests
 test-self-update *ARGS='':
@@ -104,3 +104,18 @@ release:
     @echo
     @echo "Created release (tag): {{RELEASE_VERSION}}"
     @echo
+
+#
+# Local start/stop container helpers
+# This is only meant for quick local experiments on the host's container engine
+#
+# Start local instance
+local-start *ARGS:
+    BUILD_DIR=./tests ./test-images/common/container-bundle.sh start {{ARGS}}
+
+# Stop local instance
+local-stop *ARGS:
+    BUILD_DIR=./tests ./test-images/common/container-bundle.sh stop {{ARGS}}
+
+local-delete *ARGS:
+    BUILD_DIR=./tests ./test-images/common/container-bundle.sh delete {{ARGS}}

@@ -39,12 +39,6 @@ RUN wget -O - https://thin-edge.io/install-services.sh | sh -s -- s6_overlay \
     && apk add --no-cache \
         c8y-command-plugin \
         tedge-apk-plugin \
-        # Note: Adding docker and compose adds ~75MB to the image
-        # FIXME: Either create another client, or enforce users to mount
-        # the docker cli and lib into the image
-        # apk add --no-cache libltdl
-        # -v /usr/bin/docker:/usr/bin/docker
-        docker-cli \
         # Enable easier management of containers using docker compose
         # without requiring the cli to be installed on the host (as read-only filesystems)
         # might not have access to it
@@ -55,7 +49,7 @@ RUN wget -O - https://thin-edge.io/install-services.sh | sh -s -- s6_overlay \
 # Set permissions of all files under /etc/tedge
 # TODO: Can thin-edge.io set permissions during installation?
 RUN chown -R tedge:tedge /etc/tedge \
-    && echo "tedge  ALL = (ALL) NOPASSWD:SETENV: /usr/bin/tedge, /etc/tedge/sm-plugins/[a-zA-Z0-9]*, /bin/sync, /sbin/init, /usr/bin/tedgectl, /usr/bin/docker, /usr/bin/tedge-container, /bin/kill" >/etc/sudoers.d/tedge
+    && echo "tedge  ALL = (ALL) NOPASSWD:SETENV: /usr/bin/tedge, /etc/tedge/sm-plugins/[a-zA-Z0-9]*, /bin/sync, /sbin/init, /usr/bin/tedgectl, /bin/kill, /usr/bin/tedge-container, /usr/bin/docker, /usr/bin/podman, /usr/bin/podman-remote, /usr/bin/podman-compose" >/etc/sudoers.d/tedge
 # Custom init. scripts - e.g. write env variables data to files
 COPY cont-init.d/*  /etc/cont-init.d/
 
@@ -72,11 +66,8 @@ COPY files/tedge/c8y_RemoteAccessConnect /etc/tedge/operations/c8y/
 COPY files/tedge/c8y_RemoteAccessConnect /etc/tedge/operations/c8y/
 COPY files/tedge/launch-remote-access.sh /usr/bin/
 # Self update workflow
-COPY files/tedge/self.sh /etc/tedge/sm-plugins/self
 COPY files/tedge/software_update.toml /etc/tedge/operations/
 COPY files/tedge/self_update.toml /etc/tedge/operations/
-COPY files/tedge/self_update.sh /usr/bin/
-COPY files/tedge/container_run.tpl /usr/share/tedge/
 # Container log_upload customer handler
 COPY files/tedge/container-logs.sh /usr/bin/
 COPY files/tedge/log_upload.toml /etc/tedge/operations/
