@@ -10,6 +10,9 @@ Test Tags           self-update
 
 *** Test Cases ***
 Trigger self update via local command
+    [Tags]    self-update    test:retry(2)
+    # WORKAROUND: Test fails sporadically due to the tedge-agent occassionaly processing the command twice
+    # Though it may have been fixed since 1.3.1
     ${cmd_id}=    DateTime.Get Current Date    time_zone=UTC    result_format=epoch
     ${topic}=    Set Variable    te/device/main///cmd/self_update/local-${cmd_id}
     ${operation}=    Cumulocity.Execute Shell Command

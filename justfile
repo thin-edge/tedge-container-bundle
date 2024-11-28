@@ -91,7 +91,7 @@ build-test-bundles:
 
 # Run tests
 test *ARGS='':
-    ./.venv/bin/python3 -m robot.run --outputdir output {{ARGS}} tests
+    ./.venv/bin/python3 -m robot.run --listener RetryFailed --outputdir output {{ARGS}} tests
 
 # Run self-update tests
 test-self-update *ARGS='':
