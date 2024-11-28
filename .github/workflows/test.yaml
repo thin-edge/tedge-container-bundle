@@ -10,8 +10,6 @@ on:
   pull_request_target:
     branches: [ main ]
   merge_group:
-  push:
-      branches: [ feat-update-docker-container-ng ]
 jobs:
   approve:
     name: Approve
