@@ -13,7 +13,7 @@ Trigger self update via local command
     ${cmd_id}=    DateTime.Get Current Date    time_zone=UTC    result_format=epoch
     ${topic}=    Set Variable    te/device/main///cmd/self_update/local-${cmd_id}
     ${operation}=    Cumulocity.Execute Shell Command
-    ...    tedge mqtt pub -r ${topic} '{"status":"init","image":"ghcr.io/thin-edge/tedge-container-bundle:99.99.1","containerName":"tedge"}'
+    ...    tedge mqtt pub -r -q 2 ${topic} '{"status":"init","image":"ghcr.io/thin-edge/tedge-container-bundle:99.99.1","containerName":"tedge"}'
     Cumulocity.Operation Should Be SUCCESSFUL    ${operation}
 
     ${operation}=    Cumulocity.Execute Shell Command
