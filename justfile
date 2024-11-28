@@ -104,3 +104,18 @@ release:
     @echo
     @echo "Created release (tag): {{RELEASE_VERSION}}"
     @echo
+
+#
+# Local start/stop container helpers
+# This is only meant for quick local experiments on the host's container engine
+#
+# Start local instance
+local-start *ARGS:
+    BUILD_DIR=./tests ./test-images/common/container-bundle.sh start {{ARGS}}
+
+# Stop local instance
+local-stop *ARGS:
+    BUILD_DIR=./tests ./test-images/common/container-bundle.sh stop {{ARGS}}
+
+local-delete *ARGS:
+    BUILD_DIR=./tests ./test-images/common/container-bundle.sh delete {{ARGS}}
