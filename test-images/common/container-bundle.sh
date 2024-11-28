@@ -181,7 +181,7 @@ start() {
     if [ "$DEBUG" = 1 ]; then
         # Show logs (to help with debugging when something unexpected happens)
         echo "------ container startup logs ------"
-        docker logs --tail 100 tedge 2>&1
+        docker logs --tail 1000 tedge 2>&1
         echo "------------------------------------"
     fi
 }
