@@ -19,17 +19,28 @@ on_exit.2 = "successful"
 on_exit._ = "failed"
 
 [update]
-script = "sudo -E tedge-container tools container-clone --fork --image ${.payload.image} --container ${.payload.containerName}"
-on_success = "verify"
+script = "sudo -E tedge-container tools container-clone --fork --image ${.payload.image} --container ${.payload.containerName} --stop-after 10s"
+on_success = "wait-for-container-stop"
 on_error = "failed"
+
+[wait-for-container-stop]
+# Wait for the container to stop
+background_script = "sleep 60"
+on_exec = "resume-update"
+
+[resume-update]
+# Wait before verifying to give the container updater to verify the image
+script = "sh -c 'sudo -E tedge-container self list && sleep 60'"
+on_success = "verify"
+on_error = "verify"
 
 [verify]
 script = "sudo -E tedge-container tools container-clone --image ${.payload.image} --container ${.payload.containerName} --check"
 # Expected 2 which means no update is required (as it should of already happened).
 # If an update is still required, then it generally means something unexpected happened
-on_exit.0 = "failed"
+on_exit.0 = { status = "failed", reason = "Container was not updated" }
 on_exit.2 = "successful"
-on_exit._ = "failed"
+on_exit._ = { status = "failed", reason = "Unexpected error checking container status" }
 
 [successful]
 action = "cleanup"
