@@ -68,7 +68,6 @@ COPY files/tedge/launch-remote-access.sh /usr/bin/
 # Self update workflow
 COPY files/tedge/software_update.toml /etc/tedge/operations/
 COPY files/tedge/self_update.toml /etc/tedge/operations/
-COPY files/tedge/container_run.tpl /usr/share/tedge/
 # Container log_upload customer handler
 COPY files/tedge/container-logs.sh /usr/bin/
 COPY files/tedge/log_upload.toml /etc/tedge/operations/
