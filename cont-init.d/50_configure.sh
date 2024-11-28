@@ -3,6 +3,9 @@
 set -e
 echo "Current User: $(whoami)"
 
+MAX_CONNECT_ATTEMPTS=${MAX_CONNECT_ATTEMPTS:-5}
+MAX_RANDOM_WAIT=${MAX_RANDOM_WAIT:-15}
+
 #
 # device certificate loaders
 #
@@ -79,12 +82,36 @@ if [ -n "$C8Y_DOMAIN" ] && [ -z "${TEDGE_C8Y_URL:-}" ]; then
     tedge config set c8y.url "$C8Y_DOMAIN"
 fi
 
+random_sleep() {
+    VALUE=$(awk "BEGIN { srand(); print int(rand()*32768 % $MAX_RANDOM_WAIT) }")
+    echo "Sleeping ${VALUE}s" >&2
+    sleep "$VALUE" 
+}
+
 #
 # Connect the mappers (if they are configured and not already connected)
 #
 MAPPERS="c8y az aws"
 for MAPPER in $MAPPERS; do
     if tedge config get "${MAPPER}.url" 2>/dev/null; then
-        tedge connect "$MAPPER" ||:
+
+        # Try a few 
+        attempt=1
+        while :; do
+            if tedge reconnect "$MAPPER"; then
+                echo "Successfully connected to $MAPPER" >&2
+                break
+            fi
+            if [ "$attempt" -ge "$MAX_CONNECT_ATTEMPTS" ]; then
+                echo "Couldn't connect to $MAPPER but continuing anyway" >&2
+                break
+            fi
+            attempt=$((attempt + 1))
+            random_sleep
+        done
     fi
 done
+
+# Check which bridges are present
+echo "--- mosquitto-conf directory ---" >&2
+ls -l /etc/tedge/mosquitto-conf/
