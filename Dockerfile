@@ -39,12 +39,6 @@ RUN wget -O - https://thin-edge.io/install-services.sh | sh -s -- s6_overlay \
     && apk add --no-cache \
         c8y-command-plugin \
         tedge-apk-plugin \
-        # Note: Adding docker and compose adds ~75MB to the image
-        # FIXME: Either create another client, or enforce users to mount
-        # the docker cli and lib into the image
-        # apk add --no-cache libltdl
-        # -v /usr/bin/docker:/usr/bin/docker
-        podman-remote \
         # Enable easier management of containers using docker compose
         # without requiring the cli to be installed on the host (as read-only filesystems)
         # might not have access to it
