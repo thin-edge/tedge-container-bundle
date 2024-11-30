@@ -2,12 +2,14 @@
 
 ### Self update
 
+Self updates can be done by using `container` type.
+
 1. Create a repository item
 
     ```sh
     c8y software create \
         --name tedge \
-        --softwareType self
+        --softwareType container
     ```
 
 2. Add a new version
@@ -40,7 +42,7 @@
         --device "subdevice01" \
         --action install \
         --software tedge \
-        --data softwareType=self \
+        --data softwareType=container \
         --url " " \
         --version "ghcr.io/thin-edge/tedge-container-bundle:latest"
     ```
