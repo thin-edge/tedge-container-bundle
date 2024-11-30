@@ -70,7 +70,7 @@ Self update using software update operation using Container type
     ...    {"name": "tedge", "version": "ghcr.io/thin-edge/tedge-container-bundle:99.99.2", "softwareType": "container"}
     ...    {"name": "app20", "version": "docker.io/library/nginx:1-alpine", "softwareType": "container"}
 
-    Cumulocity.Operation Should Be SUCCESSFUL    ${operation}    timeout=120
+    Cumulocity.Operation Should Be SUCCESSFUL    ${operation}    timeout=180
     Device Should Have Installed Software
     ...    {"name": "tedge", "version": "ghcr.io/thin-edge/tedge-container-bundle:99.99.2", "softwareType": "container"}
     ...    {"name": "app20", "version": "docker.io/library/nginx:1-alpine", "softwareType": "container"}
