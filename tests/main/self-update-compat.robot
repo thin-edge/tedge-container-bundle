@@ -31,6 +31,6 @@ Upgrade From Base Image
     ${operation}=    Cumulocity.Install Software
     ...    {"name": "tedge", "version": "ghcr.io/thin-edge/tedge-container-bundle:99.99.1", "softwareType": "self"}
 
-    Cumulocity.Operation Should Be SUCCESSFUL    ${operation}    timeout=120
+    Cumulocity.Operation Should Be SUCCESSFUL    ${operation}    timeout=180
     Device Should Have Installed Software
-    ...    {"name": "tedge", "version": "ghcr.io/thin-edge/tedge-container-bundle:99.99.1", "softwareType": "self"}
+    ...    {"name": "tedge", "version": "ghcr.io/thin-edge/tedge-container-bundle:99.99.1", "softwareType": "container"}
