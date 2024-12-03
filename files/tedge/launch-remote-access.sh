@@ -19,5 +19,5 @@ if [ "$REMOTE_ACCESS_DISABLE_CONTAINER_SPAWN" = 1 ] || ! has_container_api_acces
 fi
 
 echo "Launching session in an independent container"
-$SUDO tedge-container tools run-in-context --rm -- c8y-remote-access-plugin --child "$@"
+$SUDO tedge-container tools run-in-context --name-prefix remoteaccess-connect --rm -- c8y-remote-access-plugin --child "$@"
 exit 0
