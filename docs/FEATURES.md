@@ -18,33 +18,29 @@ Self updates can be done by using `container` type.
     c8y software versions create \
         --software tedge \
         --url " " \
-        --version "ghcr.io/thin-edge/tedge-container-bundle:20240929.1503"
+        --version "ghcr.io/thin-edge/tedge-container-bundle:20241201.0920"
     ```
 
-    ```sh
-    c8y software versions create \
-        --software tedge \
-        --url " " \
-        --version "ghcr.io/thin-edge/tedge-container-bundle:latest"
-    ```
-
-3. Create an operation to install software
-
-    ```sh
-    c8y software versions install \
-        --action install \
-        --software tedge \
-        --version "ghcr.io/thin-edge/tedge-container-bundle:latest"
-    ```
+3. Create an operation to install software (go-c8y-cli >= v2.45.0)
 
     ```sh
     c8y software versions install \
         --device "subdevice01" \
         --action install \
         --software tedge \
-        --data softwareType=container \
+        --version "ghcr.io/thin-edge/tedge-container-bundle:20241201.0920"
+    ```
+
+    Or if you haven't created a `tedge` software repository item, then you can install software without it, by specifying all of the required fields (including a empty space for the `--url` flag.)
+
+    ```sh
+    c8y software versions install \
+        --device "subdevice01" \
+        --action install \
+        --software tedge \
+        --softwareType container \
         --url " " \
-        --version "ghcr.io/thin-edge/tedge-container-bundle:latest"
+        --version "ghcr.io/thin-edge/tedge-container-bundle:20241201.0920"
     ```
 
 
