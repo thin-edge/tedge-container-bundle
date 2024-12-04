@@ -35,7 +35,7 @@ on_success = "collect-logs"
 on_error = "collect-logs"
 
 [collect-logs]
-script = "sh -c 'sudo -E tedge-container tools container-logs ${.payload.containerName}-updater && sudo -E tedge-container tools container-remove ${.payload.containerName}-updater'"
+script = "sh -c 'sudo -E tedge-container tools container-logs ${.payload.containerName}-updater; sudo -E tedge-container tools container-remove ${.payload.containerName}-updater'"
 on_success = "verify"
 on_error = "verify"
 

@@ -45,6 +45,9 @@ Self update using software update operation
     Device Should Have Installed Software
     ...    {"name": "tedge", "version": "ghcr.io/thin-edge/tedge-container-bundle:99.99.2", "softwareType": "container"}
 
+    # updater container should be removed (logs are already collected as part of the workflow)
+    Cumulocity.Should Have Services    service_type=container    name=tedge-updater    min_count=0    max_count=0
+
 Rollback when trying to install a non-tedge based image
     # pre-condition
     Device Should Have Installed Software
