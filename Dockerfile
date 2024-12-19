@@ -37,7 +37,7 @@ RUN case ${TARGETPLATFORM} in \
 RUN rm -f /etc/tedge/system.toml
 RUN wget -O - https://thin-edge.io/install-services.sh | sh -s -- s6_overlay \
     && apk add --no-cache \
-        c8y-command-plugin \
+        tedge-command-plugin \
         tedge-apk-plugin \
         # Enable easier management of containers using docker compose
         # without requiring the cli to be installed on the host (as read-only filesystems)
