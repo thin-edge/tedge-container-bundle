@@ -1,0 +1,38 @@
+operation = "bootstrap"
+# tedge mqtt pub -r te/device/main///cmd/bootstrap '{"status":"init","c8yUrl":"example.cumulocity.com","certificate":"<x509_certificate_pem_base64_encoded>"}'
+
+[init]
+action = "proceed"
+on_success = "executing"
+
+[executing]
+action = "proceed"
+on_success = "set_c8y_url"
+
+[set_c8y_url]
+script = "certificate_mgmt.sh set_c8y_url ${.payload.c8yUrl}"
+on_success = "update_certificate"
+
+[update_certificate]
+script = "certificate_mgmt.sh update_certificate ${.payload.certificate}"
+on_success = "check_restart_required"
+
+[check_restart_required]
+# Only restart the device if the c8y.url or certificate has changed
+script = "certificate_mgmt.sh restart_required ${.payload.requiresRestart}"
+on_exit.0 = "restart"
+on_exit.1 = "successful"
+
+[restart]
+operation = "restart"
+on_exec = "wait-for-restart"
+
+[wait-for-restart]
+action = "await-operation-completion"
+on_success = "successful"
+
+[successful]
+action = "cleanup"
+
+[failed]
+action = "cleanup"

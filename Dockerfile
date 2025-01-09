@@ -67,6 +67,12 @@ COPY files/tedge/plugins/*.toml /etc/tedge/plugins/
 COPY files/tedge/c8y_RemoteAccessConnect /etc/tedge/operations/c8y/
 COPY files/tedge/c8y_RemoteAccessConnect /etc/tedge/operations/c8y/
 COPY files/tedge/launch-remote-access.sh /usr/bin/
+
+# Bootstrap workflows
+COPY files/tedge/certificate_mgmt.sh /usr/bin/
+COPY files/tedge/certificate_create_csr.toml /etc/tedge/operations/
+COPY files/tedge/bootstrap.toml /etc/tedge/operations/
+
 # Self update workflow
 COPY files/tedge/software_update.toml /etc/tedge/operations/
 COPY files/tedge/self_update.toml /etc/tedge/operations/

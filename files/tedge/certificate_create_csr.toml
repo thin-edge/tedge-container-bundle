@@ -1,0 +1,20 @@
+operation = "certificate_create_csr"
+# tedge mqtt pub -r te/device/main///cmd/certificate_create_csr '{"status":"init","deviceId":"example0001"}'
+
+[init]
+action = "proceed"
+on_success = "executing"
+
+[executing]
+action = "proceed"
+on_success = "process"
+
+[process]
+script = "certificate_mgmt.sh create_csr ${.payload.deviceId}"
+on_success = "successful"
+
+[successful]
+action = "cleanup"
+
+[failed]
+action = "cleanup"
