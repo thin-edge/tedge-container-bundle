@@ -110,10 +110,6 @@ ENV TEDGE_C8Y_PROXY_CLIENT_HOST=127.0.0.1
 ENV TEDGE_AGENT_STATE_PATH="$DATA_DIR/agent"
 ENV TEDGE_LOGS_PATH="$DATA_DIR/logs"
 
-# Allow mounting certificate files by volume
-VOLUME [ "/etc/tedge/device-certs" ]
-VOLUME [ "$DATA_DIR" ]
-
 EXPOSE 1883
 EXPOSE 8000
 EXPOSE 8001
