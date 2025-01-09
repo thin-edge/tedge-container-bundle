@@ -5,15 +5,16 @@ set_state() {
     printf ":::begin-tedge:::\n%s\n:::end-tedge:::\n" "$1"
 }
 
+set_requires_restart() {
+    STATE=$(printf '{"requiresRestart":true}\n')
+    set_state "$STATE"
+}
+
 create_csr() {
     #
     # Create new CSR
     #
-    device_id=
-
-    if [ $# -gt 0 ]; then
-        device_id="$1"
-    fi
+    device_id="$1"
 
     CSR_PATH=$(tedge config get device.csr_path)
     rm -f "$CSR_PATH"
@@ -25,7 +26,7 @@ create_csr() {
 
     CSR_ENCODED=$(base64 -w 0 < "$CSR_PATH")
 
-    STATE=$(printf '{"csr":"%s","requiresRestart":true}\n' "$CSR_ENCODED")
+    STATE=$(printf '{"csr":"%s"}\n' "$CSR_ENCODED")
     set_state "$STATE"
 }
 
@@ -35,9 +36,21 @@ update_certificate() {
     #
     encoded_cert="$1"
     CERT_PATH=$(tedge config get device.cert_path)
-    # use mv as it is atomic
     echo "$encoded_cert" | base64 -d > "${CERT_PATH}.tmp"
+
+    # Check if certificate has changed
+    CURRENT_CHECKSUM=$(sha256sum "$CERT_PATH" ||:)
+    TARGET_CHECKSUM=$(sha256sum "${CERT_PATH}.tmp" ||:)
+
+    if [ "$CURRENT_CHECKSUM" = "$TARGET_CHECKSUM" ]; then
+        echo "No change in certificate is detected. path=${CERT_PATH}"
+        return 0
+    fi
+
+    # use mv as it is atomic
+    echo "Updating device public certificate: ${CERT_PATH}" >&2
     mv "${CERT_PATH}.tmp" "${CERT_PATH}"
+    set_requires_restart
 }
 
 set_c8y_url() {
@@ -48,10 +61,9 @@ set_c8y_url() {
     current=$(tedge config get c8y.url)
 
     if [ "$target" != "$current" ]; then
-        tedge config set c8y.url
+        tedge config set c8y.url "$target"
 
-        STATE=$(printf '{"requiresRestart":true}\n')
-        set_state "$STATE"
+        set_requires_restart
     else
         echo "c8y.url is already set to '$target'. Nothing to do" >&2
         # nothing to do
@@ -80,10 +92,6 @@ case "$ACTION" in
 
     create_csr)
         DEVICE_ID="$1"
-        if [ $# -gt 0 ]; then
-            create_csr "$DEVICE_ID"
-            DEVICE_ID="$1"
-        fi
         create_csr "$DEVICE_ID"
         ;;
     
