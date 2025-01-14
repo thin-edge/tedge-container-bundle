@@ -13,6 +13,7 @@ RELEASE_VERSION := env_var_or_default("RELEASE_VERSION", `date +'%Y%m%d.%H%M'`)
 
 # Test Variables
 TEST_IMAGE := env_var_or_default("TEST_IMAGE", "docker:27-dind")
+TEST_ITERATIONS := env_var_or_default("TEST_ITERATIONS", "1")
 
 
 # Initialize a dotenv file for usage with a local debugger
@@ -90,8 +91,10 @@ build-test-bundles:
     just build "docker,dest=./tests/tedge-container-bundle_99.99.2.tar.gz" 99.99.2
 
 # Run tests
-test *ARGS='':
-    ./.venv/bin/python3 -m robot.run --listener RetryFailed --outputdir output {{ARGS}} tests
+[positional-arguments]
+test *args="":
+    ./.venv/bin/python3 -m robot.run --listener RetryFailed --outputdir output "$@" $(yes tests | head -{{TEST_ITERATIONS}} | tr '\n' ' ')
+
 
 # Run self-update tests
 test-self-update *ARGS='':
