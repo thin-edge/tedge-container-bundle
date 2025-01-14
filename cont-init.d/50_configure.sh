@@ -6,6 +6,11 @@ echo "Current User: $(whoami)"
 MAX_CONNECT_ATTEMPTS=${MAX_CONNECT_ATTEMPTS:-5}
 MAX_RANDOM_WAIT=${MAX_RANDOM_WAIT:-15}
 
+DATA_DIR=${DATA_DIR:-/data/tedge}
+# Use PERSIST_TEDGE_TOML=1 to enable creating a symlink for the /etc/tedge/tedge.toml
+# to /data/tedge/tedge.toml, to allow persisting tedge.toml info across upgrades
+PERSIST_TEDGE_TOML=${PERSIST_TEDGE_TOML:-1}
+
 #
 # device certificate loaders
 #
@@ -61,9 +66,48 @@ load_from_file() {
     echo "Loading device certifcates from file (no-op)"
 }
 
+create_tedge_config_symlink() {
+    # Store the tedge.toml under the data dir, and
+    # use a symlink from /etc/tedge/tedge.toml to point to the data dir.
+    # This enables users to retain customized tedge.toml files across container
+    # updates
+    DATA_DIR_TEDGE_TOML="$DATA_DIR/tedge.toml"
+    ETC_TEDGE_TOML="/etc/tedge/tedge.toml"
+
+    if [ ! -d "$DATA_DIR" ]; then
+        echo "Warning: Data dir does not exist, so skipping creation of symlink under $DATA_DIR" >&2
+        return 0
+    fi
+
+    if [ -L "$ETC_TEDGE_TOML" ]; then
+        echo "tedge.toml symlink already exists. path=$ETC_TEDGE_TOML" >&2
+        return 0
+    fi
+
+    # move any existing tedge.toml to data dir (if it does not already exist)
+    if [ ! -f "$DATA_DIR_TEDGE_TOML" ]; then
+        if [ -f "$ETC_TEDGE_TOML" ]; then
+            echo "Moving existing tedge.toml file from $ETC_TEDGE_TOML to $DATA_DIR_TEDGE_TOML" >&2
+            cp "$ETC_TEDGE_TOML" "$DATA_DIR_TEDGE_TOML"
+            rm -f "$ETC_TEDGE_TOML"
+        else
+            echo "Creating empty file"
+            touch "$DATA_DIR_TEDGE_TOML"
+        fi
+    fi
+
+    echo "Creating symlink from $DATA_DIR_TEDGE_TOML to /etc/tedge/tedge.toml" >&2
+    ln -sf "$DATA_DIR_TEDGE_TOML" "$ETC_TEDGE_TOML" || echo "Warning: Failed to create tedge.toml symlink" >&2
+    echo "Successfully created tedge.toml symlink" >&2
+}
+
 ############
 # Main
 ############
+
+if [ "$PERSIST_TEDGE_TOML" = 1 ]; then
+    create_tedge_config_symlink
+fi
 
 # Create the agent state folder
 AGENT_STATE=$(tedge config get agent.state.path)

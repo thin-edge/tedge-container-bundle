@@ -1,4 +1,4 @@
-ARG TEDGE_TAG=1.4.1
+ARG TEDGE_TAG=1.4.2
 # thin-edge.io base image name: tedge, tedge-main
 ARG TEDGE_IMAGE=tedge
 FROM ghcr.io/thin-edge/${TEDGE_IMAGE}:${TEDGE_TAG}
@@ -109,6 +109,11 @@ ENV TEDGE_C8Y_PROXY_CLIENT_HOST=127.0.0.1
 # but don't share too much data as it can be destructive
 ENV TEDGE_AGENT_STATE_PATH="$DATA_DIR/agent"
 ENV TEDGE_LOGS_PATH="$DATA_DIR/logs"
+
+# Persist tedge.toml under /data/tedge/tedge.toml by using
+# a symlink from /etc/tedge/tedge.toml to /data/tedge/tedge.toml
+# This allows the tedge.toml to be maintained across updates
+ENV PERSIST_TEDGE_TOML=1
 
 EXPOSE 1883
 EXPOSE 8000

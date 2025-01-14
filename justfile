@@ -3,7 +3,7 @@ set export
 
 IMAGE := "tedge-container-bundle"
 TEDGE_IMAGE := "tedge"
-TEDGE_TAG := "1.4.1"
+TEDGE_TAG := "1.4.2"
 
 REGISTRY := "ghcr.io"
 REPO_OWNER := "thin-edge"
