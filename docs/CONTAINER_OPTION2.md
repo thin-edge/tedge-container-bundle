@@ -120,8 +120,7 @@ For instances where you can't do the bootstrapping of the container before the c
     If you have previously created the volumes, then it is recommended to delete them (to ensure a fresh installation) using the following commands:
 
     ```sh
-    docker volume rm device-certs
-    docker volume rm tedge
+    docker volume rm device-certs tedge
     ```
 
 2. Start the container. Note: the container won't really work until you have manually bootstrapped it, so you will see a lot of error when looking at the logs)
@@ -155,8 +154,7 @@ For instances where you can't do the bootstrapping of the container before the c
     tedge config set c8y.url thin-edge-io.eu-latest.cumulocity.com
     tedge cert upload c8y
 
-    # reboot the container, or alternatively you can use docker cli for this
-    reboot
+    tedge reconnect c8y
     ```
 
 4. The device should now have been registered with Cumulocity and you can also check the container logs (from outside of the container):
