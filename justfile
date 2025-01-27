@@ -37,7 +37,6 @@ build OUTPUT_TYPE=DEFAULT_OUTPUT_TYPE VERSION='latest': build-setup
         --build-arg "TEDGE_IMAGE={{TEDGE_IMAGE}}" \
         --build-arg "TEDGE_TAG={{TEDGE_TAG}}" \
         -t "{{REGISTRY}}/{{REPO_OWNER}}/{{IMAGE}}:{{VERSION}}" \
-        -t "{{REGISTRY}}/{{REPO_OWNER}}/{{IMAGE}}:latest" \
         -f Dockerfile \
         --output=type="{{OUTPUT_TYPE}}",oci-mediatypes=false \
         --provenance=false \
