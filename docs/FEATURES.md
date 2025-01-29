@@ -53,18 +53,30 @@ Self updates can be done by using `container` type.
 **Pre-requisites**
 
 * container is attached to the bridge network
-* container has an extra host configured for the docker network (e.g. `--add-host=host.docker.internal:host-gateway`)
-* ssh daemon has a listener on the container bridge network (e.g. typically `172.17.0.1`)
+* **docker only** container has an extra host configured for the docker network (e.g. `--add-host=host.docker.internal:host-gateway`)
+* ssh daemon has a listener on the container bridge network (e.g. typically `172.17.0.1` for docker, though you can check by running `ifconfig` and getting the ipv4 address of the docker or podman network adapter)
 * Either your ssh keys have been added to the device, or allows password authentication
 
 After the pre-requisites are met, you can easily access your device using the following steps:
 
 1. Create a Cloud Remote Access PASSTHROUGH configuration for the device
 
+    **docker**
+
     ```sh
     c8y remoteaccess configurations create-passthrough \
         --device device01 \
         --hostname host.docker.internal \
+        --port 22 \
+        --name device-host
+    ```
+
+    **podman**
+
+    ```sh
+    c8y remoteaccess configurations create-passthrough \
+        --device device01 \
+        --hostname host.containers.internal \
         --port 22 \
         --name device-host
     ```
