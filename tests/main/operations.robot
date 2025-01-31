@@ -29,6 +29,11 @@ Get Configuration File
     tedge.toml
     system.toml
 
+Set Configuration File
+    ${binary_url}=    Create Inventory Binary    tedge-configuration-plugin.toml    toml    file=${CURDIR}/files/tedge-configuration-plugin.v2.toml
+    ${operation}=    Set Configuration    tedge-configuration-plugin    url=${binary_url}
+    Operation Should Be SUCCESSFUL    ${operation}
+
 Execute Shell Command
     ${operation}=    Cumulocity.Execute Shell Command    ls -l /etc/tedge
     Cumulocity.Operation Should Be SUCCESSFUL    ${operation}
