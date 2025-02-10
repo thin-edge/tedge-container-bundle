@@ -31,6 +31,18 @@ on_exec = "resume-update"
 [resume-update]
 # Wait before verifying to give the container updater to verify the image
 script = "sh -c 'sudo -E tedge-container self list && sleep 60'"
+on_success = "needs_restart"
+on_error = "needs_restart"
+
+[needs_restart]
+# if env. variable TEDGE_RESTART_ON_SELF_UPDATE is set and has value TRUE the updated container is restarted
+script = "sh -c 'if [ ! -z "${TEDGE_RESTART_ON_SELF_UPDATE}" ] && [ "${TEDGE_RESTART_ON_SELF_UPDATE}" = "TRUE" ]; then exit 0; else exit 1; fi'"
+on_success = "restart"
+on_error = "collect-logs"
+
+[restart]
+# the cmd 'tedge-container tools container-restart' needs to be implemented in https://github.com/thin-edge/tedge-container-plugin/blob/main/cli/tools/cmd.go, as only container_clone, container_remove, ... exists
+script = "sh -c 'sudo -E tedge-container tools container-restart ${.payload.containerName}'"
 on_success = "collect-logs"
 on_error = "collect-logs"
 
