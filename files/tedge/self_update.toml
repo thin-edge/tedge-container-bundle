@@ -35,10 +35,10 @@ on_success = "needs_restart"
 on_error = "needs_restart"
 
 [needs_restart]
-# if env. variable TEDGE_RESTART_ON_SELF_UPDATE is set and has value TRUE the updated container is restarted
-script = "sh -c 'if [ ! -z "${TEDGE_RESTART_ON_SELF_UPDATE}" ] && [ "${TEDGE_RESTART_ON_SELF_UPDATE}" = "TRUE" ]; then exit 0; else exit 1; fi'"
-on_success = "restart"
-on_error = "collect-logs"
+script = """sh -c '[ "${TEDGE_RESTART_ON_SELF_UPDATE:-}" = 1 ] && exit 2'"""
+on_exit.0 = "collect-logs"
+on_exit.2 = "restart"
+on_exit._ = "failed"
 
 [restart]
 operation = "restart"
