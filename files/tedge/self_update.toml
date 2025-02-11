@@ -31,8 +31,23 @@ on_exec = "resume-update"
 [resume-update]
 # Wait before verifying to give the container updater to verify the image
 script = "sh -c 'sudo -E tedge-container self list && sleep 60'"
+on_success = "needs_restart"
+on_error = "needs_restart"
+
+[needs_restart]
+script = """sh -c '[ "${TEDGE_RESTART_ON_SELF_UPDATE:-}" = 1 ] && exit 2'"""
+on_exit.0 = "collect-logs"
+on_exit.2 = "restart"
+on_exit._ = "failed"
+
+[restart]
+operation = "restart"
+on_exec = "await-restart"
+
+[await-restart]
+action = "await-operation-completion"
 on_success = "collect-logs"
-on_error = "collect-logs"
+on_error = "failed"
 
 [collect-logs]
 script = "sh -c 'sudo -E tedge-container tools container-logs ${.payload.containerName}-updater; sudo -E tedge-container tools container-remove ${.payload.containerName}-updater'"
