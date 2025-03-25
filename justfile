@@ -1,7 +1,7 @@
 set dotenv-load
 set export
 
-IMAGE := "tedge-container-bundle"
+IMAGE := env_var_or_default("IMAGE", "tedge-container-bundle")
 TEDGE_IMAGE := env_var_or_default("TEDGE_IMAGE", "tedge")
 TEDGE_TAG := env_var_or_default("TEDGE_TAG", "1.4.2")
 

@@ -37,3 +37,10 @@ jobs:
 
       - name: Publish images
         run: just publish registry ${{ inputs.VERSION || github.ref_name }}
+
+      - name: Publish image (tedge-main branch)
+        env:
+          IMAGE: tedge-container-bundle-main
+          TEDGE_IMAGE: tedge-main
+          TEDGE_TAG: latest
+        run: just publish registry ${{ inputs.VERSION || github.ref_name }}
