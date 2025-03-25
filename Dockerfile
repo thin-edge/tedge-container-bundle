@@ -5,6 +5,9 @@ FROM ghcr.io/thin-edge/${TEDGE_IMAGE}:${TEDGE_TAG}
 ARG TARGETPLATFORM
 ARG S6_OVERLAY_VERSION=3.2.0.0
 ARG DATA_DIR=/data/tedge
+# Match default tedge uid/gid used by Yocto images
+ARG USERID=999
+ARG GROUPID=992
 
 USER root
 
@@ -15,6 +18,7 @@ RUN apk add --no-cache \
         jq \
         bash \
         curl \
+        shadow \
         sudo
 
 # Install s6-overlay
@@ -48,11 +52,18 @@ RUN wget -O - https://thin-edge.io/install-services.sh | sh -s -- s6_overlay \
     # Support updating from older images which still use the deprecated self type
     && ln -s /usr/bin/tedge-container /etc/tedge/sm-plugins/self
 
+# Set an explicit uid and gid to allow better control
+# when sharing files/sockets from the host to the non-root user
+# running in the container
 # Set permissions of all files under /etc/tedge
 # TODO: Can thin-edge.io set permissions during installation?
-RUN chown -R tedge:tedge /etc/tedge \
+RUN usermod -u "$USERID" tedge \
+    && groupmod -g "$GROUPID" tedge \
+    && chown -R tedge:tedge /etc/tedge \
+    && chown -R tedge:tedge /var/tedge \
     && echo "tedge  ALL = (ALL) NOPASSWD:SETENV: /usr/bin/tedge, /etc/tedge/sm-plugins/[a-zA-Z0-9]*, /bin/sync, /sbin/init, /usr/bin/tedgectl, /bin/kill, /usr/bin/tedge-container, /usr/bin/docker, /usr/bin/podman, /usr/bin/podman-remote, /usr/bin/podman-compose" >/etc/sudoers.d/tedge \
-    && echo "tedge  ALL = (ALL) NOPASSWD:SETENV: /usr/bin/tedge-write /etc/*" >> /etc/sudoers.d/tedge
+    && echo "tedge  ALL = (ALL) NOPASSWD:SETENV: /usr/bin/tedge-write /etc/*" >> /etc/sudoers.d/tedge \
+    && echo "tedge  ALL = (ALL) NOPASSWD:SETENV: /usr/bin/fix-permissions.sh" >> /etc/sudoers.d/tedge-fix-permissions
 # Custom init. scripts - e.g. write env variables data to files
 COPY cont-init.d/*  /etc/cont-init.d/
 
@@ -77,6 +88,8 @@ COPY files/tedge/self_update.sh /usr/bin/
 COPY files/tedge/container-logs.sh /usr/bin/
 COPY files/tedge/log_upload.toml /etc/tedge/operations/
 COPY files/tedge/log_upload_container.toml /etc/tedge/operations/
+# Script to fix the permissions / ownership which is called on container startup
+COPY files/tedge/fix-permissions.sh /usr/bin/
 
 
 ENV S6_BEHAVIOUR_IF_STAGE2_FAILS=2

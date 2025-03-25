@@ -69,7 +69,7 @@ load_from_file() {
     fi
 
     # Don't actually do anything, but confirm the presence of device certificates
-    echo "Loading device certifcates from file (no-op)"
+    echo "Loading device certificates from file (no-op)"
 }
 
 create_tedge_config_symlink() {
@@ -110,6 +110,11 @@ create_tedge_config_symlink() {
 ############
 # Main
 ############
+# fix permissions in case if the tedge user has had its uid/gid changed across a container update
+if command -V sudo >/dev/null 2>&1; then
+    export DATA_DIR
+    sudo -E DATA_DIR="$DATA_DIR" /usr/bin/fix-permissions.sh
+fi
 
 if [ "$PERSIST_TEDGE_TOML" = 1 ]; then
     create_tedge_config_symlink
