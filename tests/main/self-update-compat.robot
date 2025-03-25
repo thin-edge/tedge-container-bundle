@@ -4,7 +4,8 @@ Library             DateTime
 
 Test Teardown       Stop Device
 
-Test Tags           self-update
+# Retry due to a problem with the older tedge-container-bundle images
+Test Tags           self-update    test:retry(3)
 
 
 *** Test Cases ***
