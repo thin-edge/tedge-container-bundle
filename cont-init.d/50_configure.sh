@@ -17,21 +17,27 @@ PERSIST_TEDGE_TOML=${PERSIST_TEDGE_TOML:-1}
 load_from_env() {
     #
     # Load certificate (base64 encoded) from env variables
+    # Note: Use if one of CERTPRIVATE or CERTPUBLIC is provided, as
+    # the private key is optional when using the pkcs11 (cryptoki) interface
     #
-    if [ -z "${CERTPRIVATE:-}" ] || [ -z "${CERTPUBLIC:-}" ]; then
+    if [ -z "${CERTPRIVATE:-}" ] && [ -z "${CERTPUBLIC:-}" ]; then
         return 1
     fi
     echo "Loading device certificate from environment variables" >&2
 
-    echo "Writing thin-edge.io private key from env 'CERTPRIVATE' (decoding from base64) to file" >&2
-    CERT_FILE_KEY="$(tedge config get device.key_path)"
-    printf '%s' "$CERTPRIVATE" | tr -d '"' | base64 -d > "$CERT_FILE_KEY"
-    chmod 600 "$CERT_FILE_KEY"
+    if [ -n "${CERTPRIVATE:-}" ]; then
+        echo "Writing thin-edge.io private key from env 'CERTPRIVATE' (decoding from base64) to file" >&2
+        CERT_FILE_KEY="$(tedge config get device.key_path)"
+        printf '%s' "$CERTPRIVATE" | tr -d '"' | base64 -d > "$CERT_FILE_KEY"
+        chmod 600 "$CERT_FILE_KEY"
+    fi
 
-    echo "Writing thin-edge.io private key from env 'CERTPUBLIC' (decoding from base64) to file" >&2
-    CERT_FILE_PUB="$(tedge config get device.cert_path)"
-    printf '%s' "$CERTPUBLIC" | tr -d '"' | base64 -d > "$CERT_FILE_PUB"
-    chmod 644 "$CERT_FILE_PUB"
+    if [ -n "${CERTPUBLIC:-}" ]; then
+        echo "Writing thin-edge.io private key from env 'CERTPUBLIC' (decoding from base64) to file" >&2
+        CERT_FILE_PUB="$(tedge config get device.cert_path)"
+        printf '%s' "$CERTPUBLIC" | tr -d '"' | base64 -d > "$CERT_FILE_PUB"
+        chmod 644 "$CERT_FILE_PUB"
+    fi
 }
 
 load_from_secrets() {
