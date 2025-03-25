@@ -2,8 +2,8 @@ set dotenv-load
 set export
 
 IMAGE := "tedge-container-bundle"
-TEDGE_IMAGE := "tedge"
-TEDGE_TAG := "1.4.2"
+TEDGE_IMAGE := env_var_or_default("TEDGE_IMAGE", "tedge")
+TEDGE_TAG := env_var_or_default("TEDGE_TAG", "1.4.2")
 
 REGISTRY := "ghcr.io"
 REPO_OWNER := "thin-edge"
@@ -81,7 +81,9 @@ lint *ARGS:
 # Build test images
 build-test: build-test-bundles
     echo "Creating test infrastructure image"
-    [ -d "./test-images/{{TEST_IMAGE}}" ] && docker build --load -t {{TEST_IMAGE}} -f ./test-images/{{TEST_IMAGE}}/Dockerfile . || docker pull "{{TEST_IMAGE}}"
+    [ -d "./test-images/{{TEST_IMAGE}}" ] && docker build \
+        --load -t {{TEST_IMAGE}} \
+        -f ./test-images/{{TEST_IMAGE}}/Dockerfile . || docker pull "{{TEST_IMAGE}}"
 
 build-test-bundles:
     echo "Building tedge-container-bundle images"
