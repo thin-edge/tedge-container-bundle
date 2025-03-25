@@ -69,7 +69,7 @@ load_from_file() {
     fi
 
     # Don't actually do anything, but confirm the presence of device certificates
-    echo "Loading device certifcates from file (no-op)"
+    echo "Loading device certificates from file (no-op)"
 }
 
 create_tedge_config_symlink() {
