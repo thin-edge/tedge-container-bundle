@@ -4,6 +4,7 @@
 
 * This instructions have not been fully tested, and are to be used as a starting guide only until it can be fully tested
 * There are multiple ways to do this, the instructions just show one way on how to setup your device up
+* Currently these instructions require the tedge-container-bundle-main image which uses the latest thin-edge.io version from the main branch (until the next official release, 1.5.0)
 
 **When to use it?**
 
