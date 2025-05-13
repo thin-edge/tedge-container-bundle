@@ -17,8 +17,8 @@ Update From Legacy Versions
 *** Keywords ***
 Upgrade From Base Image
     [Arguments]    ${IMAGE}
-    # pre-condition
-    Setup Device    image=${IMAGE}
+    # pre-condition (use self-signed certificate as c8y support was only added after the base version)
+    Setup Device With Self Signed Certificate    image=${IMAGE}
 
     ${major_version}=    Execute Command
     ...    podman --version | cut -d' ' -f3 | cut -d. -f1

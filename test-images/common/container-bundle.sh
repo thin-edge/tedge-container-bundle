@@ -21,6 +21,16 @@ while [ $# -gt 0 ]; do
             DEVICE_ID="$2"
             shift
             ;;
+        --ca)
+            case "$2" in
+                self-signed)
+                    ENABLE_C8Y_CA=0
+                    ;;
+                c8y)
+                    ENABLE_C8Y_CA=1
+                    ;;
+            esac
+            ;;
         --c8y-url)
             TEDGE_C8Y_URL="$2"
             shift
