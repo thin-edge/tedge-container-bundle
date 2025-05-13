@@ -10,7 +10,7 @@ DEVICE_ID="${DEVICE_ID:-}"
 IMAGE="ghcr.io/thin-edge/tedge-container-bundle:99.99.1"
 CONTAINER_NAME=${CONTAINER_NAME:-"tedge"}
 DEBUG=${DEBUG:-0}
-ENABLE_C8Y_CA=${ENABLE_C8Y_CA:-1}
+CA=${CA:-c8y}
 DEVICE_ONE_TIME_PASSWORD=${DEVICE_ONE_TIME_PASSWORD:-}
 
 ACTION="$1"
@@ -27,14 +27,7 @@ while [ $# -gt 0 ]; do
             shift
             ;;
         --ca)
-            case "$2" in
-                self-signed)
-                    ENABLE_C8Y_CA=0
-                    ;;
-                c8y)
-                    ENABLE_C8Y_CA=1
-                    ;;
-            esac
+            CA="$2"
             shift
             ;;
         --c8y-url)
@@ -199,7 +192,7 @@ start() {
         -v "device-certs:/etc/tedge/device-certs" \
         -v "tedge:/data/tedge" \
         -e DEVICE_ID="$DEVICE_ID" \
-        -e ENABLE_C8Y_CA="$ENABLE_C8Y_CA" \
+        -e CA="$CA" \
         -e DEVICE_ONE_TIME_PASSWORD="$DEVICE_ONE_TIME_PASSWORD" \
         -e TEDGE_C8Y_OPERATIONS_AUTO_LOG_UPLOAD=always \
         -e "TEDGE_C8Y_URL=$TEDGE_C8Y_URL" \
@@ -243,7 +236,7 @@ case "$ACTION" in
         check_engine
         build
         prepare
-        if [ "$ENABLE_C8Y_CA" = 0 ]; then
+        if [ "$CA" = "self-signed" ]; then
             bootstrap_certificate
         fi
         start

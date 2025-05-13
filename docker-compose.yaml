@@ -7,7 +7,7 @@ services:
     environment:
       - C8Y_DOMAIN=${C8Y_DOMAIN:-}
       - DEVICE_ID=${DEVICE_ID:-}
-      - ENABLE_C8Y_CA=${ENABLE_C8Y_CA:-1}
+      - CA=${CA:-c8y}
     tmpfs:
       - /tmp
     volumes:
