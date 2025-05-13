@@ -180,6 +180,7 @@ start() {
         -p "127.0.0.1:8001:8001" \
         -v "device-certs:/etc/tedge/device-certs" \
         -v "tedge:/data/tedge" \
+        -e DEVICE_ID="$DEVICE_ID" \
         -e ENABLE_C8Y_CA="$ENABLE_C8Y_CA" \
         -e DEVICE_ONE_TIME_PASSWORD="$DEVICE_ONE_TIME_PASSWORD" \
         -e TEDGE_C8Y_OPERATIONS_AUTO_LOG_UPLOAD=always \
