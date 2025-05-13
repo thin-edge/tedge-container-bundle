@@ -100,6 +100,24 @@ After the project pre-requisites have been installed, you can start the containe
     just test
     ```
 
+#### Cumulocity Certificate Authority (Preview)
+
+Note: These instructions use the Cumulocity certificate-authority feature and a UI change (pre-filling registration via a URL) which might not be deployed on your tenant.
+
+1. Active your Cumulocity session using go-c8y-cli
+
+    ```sh
+    set-session
+    ```
+
+2. Start the local image (running in the foreground)
+
+    ```sh
+    docker compose up --build
+    ```
+
+3. Click on the registration url to be redirected to the Cumulocity URL in your browser and confirm the registration
+
 ## Project structure
 
 |Directory|Description|
