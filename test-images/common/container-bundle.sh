@@ -9,6 +9,8 @@ TEDGE_C8Y_URL="${TEDGE_C8Y_URL:-$C8Y_BASEURL}"
 DEVICE_ID="${DEVICE_ID:-}"
 IMAGE="ghcr.io/thin-edge/tedge-container-bundle:99.99.1"
 DEBUG=${DEBUG:-0}
+ENABLE_C8Y_CA=${ENABLE_C8Y_CA:-1}
+DEVICE_ONE_TIME_PASSWORD=${DEVICE_ONE_TIME_PASSWORD:-}
 
 ACTION="$1"
 shift
@@ -21,6 +23,10 @@ while [ $# -gt 0 ]; do
             ;;
         --c8y-url)
             TEDGE_C8Y_URL="$2"
+            shift
+            ;;
+        --one-time-password|-p)
+            DEVICE_ONE_TIME_PASSWORD="$2"
             shift
             ;;
         --load-image-dir)
@@ -174,6 +180,8 @@ start() {
         -p "127.0.0.1:8001:8001" \
         -v "device-certs:/etc/tedge/device-certs" \
         -v "tedge:/data/tedge" \
+        -e ENABLE_C8Y_CA="$ENABLE_C8Y_CA" \
+        -e DEVICE_ONE_TIME_PASSWORD="$DEVICE_ONE_TIME_PASSWORD" \
         -e TEDGE_C8Y_OPERATIONS_AUTO_LOG_UPLOAD=always \
         -e "TEDGE_C8Y_URL=$TEDGE_C8Y_URL" \
         "$IMAGE"
@@ -216,7 +224,9 @@ case "$ACTION" in
         check_engine
         build
         prepare
-        bootstrap_certificate
+        if [ "$ENABLE_C8Y_CA" = 0 ]; then
+            bootstrap_certificate
+        fi
         start
         ;;
     stop)

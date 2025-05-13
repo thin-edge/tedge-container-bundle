@@ -23,8 +23,9 @@ Setup Device
 
     Transfer To Device    ${CURDIR}/../../test-images/common/container-bundle.sh    /usr/bin/
     Transfer To Device    ${CURDIR}/../*.tar.gz    /build/
+    ${credentials}=    Cumulocity.Bulk Register Device With Cumulocity CA    external_id=${DEVICE_ID}    name=${DEVICE_ID}
     Execute Command
-    ...    container-bundle.sh start --device-id '${DEVICE_ID}' --c8y-url '${C8Y_CONFIG.host}' --image "${image}" --debug 2>&1
+    ...    container-bundle.sh start --device-id '${DEVICE_ID}' --c8y-url '${C8Y_CONFIG.host}' --one-time-password '${credentials.one_time_password}' --image "${image}" --debug 2>&1
 
     Set Suite Variable    ${DEVICE_ID}
     Cumulocity.External Identity Should Exist    ${DEVICE_ID}
