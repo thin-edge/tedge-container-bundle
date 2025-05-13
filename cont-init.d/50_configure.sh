@@ -3,6 +3,20 @@
 set -e
 echo "Current User: $(whoami)"
 
+# Cumulocity certificate-authority feature
+ENABLE_C8Y_CA=${ENABLE_C8Y_CA:-0}
+SHOW_REGISTRATION_BANNER=${SHOW_REGISTRATION_BANNER:-0}
+
+# DEVICE_ID is only used for the initial device enrollment
+# afterwards the device.id is taken from the device's certificate
+DEVICE_ID=${DEVICE_ID:-}
+DEVICE_ONE_TIME_PASSWORD=${DEVICE_ONE_TIME_PASSWORD:-}
+
+# Use default value based on the hostname
+if [ -z "$DEVICE_ID" ]; then
+    DEVICE_ID="tedge_$(hostname || host)"
+fi
+
 MAX_CONNECT_ATTEMPTS=${MAX_CONNECT_ATTEMPTS:-5}
 MAX_RANDOM_WAIT=${MAX_RANDOM_WAIT:-15}
 
@@ -143,6 +157,39 @@ random_sleep() {
     sleep "$VALUE" 
 }
 
+get_random_code() {
+    awk '
+function rand_string(n,         s,i) {
+    for ( i=1; i<=n; i++ ) {
+        s = s chars[int(1+rand()*numChars)]
+    }
+    return s
+}
+BEGIN{
+    srand()
+    for (i=48; i<=122; i++) {
+        char = sprintf("%c", i)
+        if ( char ~ /[[:alnum:]]/ ) {
+            chars[++numChars] = char
+        }
+    }
+
+    for (i=1; i<=1; i++) {print rand_string(30)}
+}'
+}
+
+show_registration_banner() {
+    TARGET_URL=$(tedge config get c8y.http 2>/dev/null ||:)
+    cat <<EOT
+------------------------------------------------------
+Cumulocity Registration URL
+------------------------------------------------------
+
+https://${TARGET_URL}/apps/devicemanagement/index.html#/deviceregistration?externalId=${DEVICE_ID}&one-time-password=${DEVICE_ONE_TIME_PASSWORD}
+
+EOT
+}
+
 #
 # Connect the mappers (if they are configured and not already connected)
 #
@@ -150,7 +197,32 @@ MAPPERS="c8y az aws"
 for MAPPER in $MAPPERS; do
     if tedge config get "${MAPPER}.url" 2>/dev/null; then
 
-        # Try a few 
+        case "$MAPPER" in
+            c8y)
+                if [ "$ENABLE_C8Y_CA" = 1 ]; then
+                    # Register device using the Cumulocity certificate-authority feature
+                    PUBLIC_CERT=$(tedge config get device.cert_path 2>/dev/null ||:)
+                    if [ ! -f "$PUBLIC_CERT" ]; then
+                        if [ -z "$DEVICE_ONE_TIME_PASSWORD" ]; then
+                            DEVICE_ONE_TIME_PASSWORD=$(get_random_code)
+                            SHOW_REGISTRATION_BANNER=1
+                        fi
+
+                        if [ "$SHOW_REGISTRATION_BANNER" = 1 ]; then
+                            show_registration_banner
+                        fi
+
+                        # Download certificate
+                        echo "Downloading certificate. device-id=$DEVICE_ID" >&2
+                        if ! tedge cert download c8y --device-id "$DEVICE_ID" --one-time-password "$DEVICE_ONE_TIME_PASSWORD" --retry-every 5s --max-timeout 300s; then
+                            echo "WARNING: Failed to download certificate" >&2
+                        fi
+                    fi
+                fi
+                ;;
+        esac
+
+        # Connect (with retries)
         attempt=1
         while :; do
             if tedge reconnect "$MAPPER"; then
