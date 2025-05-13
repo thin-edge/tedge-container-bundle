@@ -8,6 +8,7 @@ BUILD_DIR=${BUILD_DIR:-/build}
 TEDGE_C8Y_URL="${TEDGE_C8Y_URL:-$C8Y_BASEURL}"
 DEVICE_ID="${DEVICE_ID:-}"
 IMAGE="ghcr.io/thin-edge/tedge-container-bundle:99.99.1"
+CONTAINER_NAME=${CONTAINER_NAME:-"tedge"}
 DEBUG=${DEBUG:-0}
 ENABLE_C8Y_CA=${ENABLE_C8Y_CA:-1}
 DEVICE_ONE_TIME_PASSWORD=${DEVICE_ONE_TIME_PASSWORD:-}
@@ -17,6 +18,10 @@ shift
 
 while [ $# -gt 0 ]; do
     case "$1" in
+        --name)
+            CONTAINER_NAME="$2"
+            shift
+            ;;
         --device-id)
             DEVICE_ID="$2"
             shift
@@ -30,6 +35,7 @@ while [ $# -gt 0 ]; do
                     ENABLE_C8Y_CA=1
                     ;;
             esac
+            shift
             ;;
         --c8y-url)
             TEDGE_C8Y_URL="$2"
@@ -179,9 +185,11 @@ start() {
             ;;
     esac
 
+    docker rm -f "$CONTAINER_NAME" >/dev/null 2>&1 ||:
+
     # shellcheck disable=SC2086
     docker run -d \
-        --name tedge \
+        --name "$CONTAINER_NAME" \
         $CONTAINER_OPTIONS \
         --restart always \
         --network tedge \
