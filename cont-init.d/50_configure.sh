@@ -4,7 +4,7 @@ set -e
 echo "Current User: $(whoami)"
 
 # Cumulocity certificate-authority feature
-ENABLE_C8Y_CA=${ENABLE_C8Y_CA:-0}
+CA=${CA:-self-signed}
 SHOW_REGISTRATION_BANNER=${SHOW_REGISTRATION_BANNER:-0}
 
 # DEVICE_ID is only used for the initial device enrollment
@@ -199,7 +199,7 @@ for MAPPER in $MAPPERS; do
 
         case "$MAPPER" in
             c8y)
-                if [ "$ENABLE_C8Y_CA" = 1 ]; then
+                if [ "$CA" = "c8y" ]; then
                     # Register device using the Cumulocity certificate-authority feature
                     PUBLIC_CERT=$(tedge config get device.cert_path 2>/dev/null ||:)
                     if [ ! -f "$PUBLIC_CERT" ]; then

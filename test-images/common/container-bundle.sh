@@ -8,19 +8,34 @@ BUILD_DIR=${BUILD_DIR:-/build}
 TEDGE_C8Y_URL="${TEDGE_C8Y_URL:-$C8Y_BASEURL}"
 DEVICE_ID="${DEVICE_ID:-}"
 IMAGE="ghcr.io/thin-edge/tedge-container-bundle:99.99.1"
+CONTAINER_NAME=${CONTAINER_NAME:-"tedge"}
 DEBUG=${DEBUG:-0}
+CA=${CA:-c8y}
+DEVICE_ONE_TIME_PASSWORD=${DEVICE_ONE_TIME_PASSWORD:-}
 
 ACTION="$1"
 shift
 
 while [ $# -gt 0 ]; do
     case "$1" in
+        --name)
+            CONTAINER_NAME="$2"
+            shift
+            ;;
         --device-id)
             DEVICE_ID="$2"
             shift
             ;;
+        --ca)
+            CA="$2"
+            shift
+            ;;
         --c8y-url)
             TEDGE_C8Y_URL="$2"
+            shift
+            ;;
+        --one-time-password|-p)
+            DEVICE_ONE_TIME_PASSWORD="$2"
             shift
             ;;
         --load-image-dir)
@@ -163,9 +178,11 @@ start() {
             ;;
     esac
 
+    docker rm -f "$CONTAINER_NAME" >/dev/null 2>&1 ||:
+
     # shellcheck disable=SC2086
     docker run -d \
-        --name tedge \
+        --name "$CONTAINER_NAME" \
         $CONTAINER_OPTIONS \
         --restart always \
         --network tedge \
@@ -174,6 +191,9 @@ start() {
         -p "127.0.0.1:8001:8001" \
         -v "device-certs:/etc/tedge/device-certs" \
         -v "tedge:/data/tedge" \
+        -e DEVICE_ID="$DEVICE_ID" \
+        -e CA="$CA" \
+        -e DEVICE_ONE_TIME_PASSWORD="$DEVICE_ONE_TIME_PASSWORD" \
         -e TEDGE_C8Y_OPERATIONS_AUTO_LOG_UPLOAD=always \
         -e "TEDGE_C8Y_URL=$TEDGE_C8Y_URL" \
         "$IMAGE"
@@ -216,7 +236,9 @@ case "$ACTION" in
         check_engine
         build
         prepare
-        bootstrap_certificate
+        if [ "$CA" = "self-signed" ]; then
+            bootstrap_certificate
+        fi
         start
         ;;
     stop)

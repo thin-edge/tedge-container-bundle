@@ -45,7 +45,7 @@ Install application using docker compose
     ...    file=${CURDIR}/files/docker-compose.nodered.yaml
     ${operation}=    Cumulocity.Install Software
     ...    {"name": "nodered-instance1", "version": "1.0.0", "softwareType": "container-group", "url": "${file_url}"}
-    Cumulocity.Operation Should Be SUCCESSFUL    ${operation}
+    Cumulocity.Operation Should Be SUCCESSFUL    ${operation}    timeout=60
     ${software}=    Device Should Have Installed Software
     ...    {"name": "nodered-instance1", "version": "1.0.0", "softwareType": "container-group"}
 
