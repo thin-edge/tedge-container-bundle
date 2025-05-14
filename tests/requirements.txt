@@ -1,5 +1,5 @@
 robotframework~=7.0.0
-robotframework-c8y @ git+https://github.com/reubenmiller/robotframework-c8y.git@0.42.2
+robotframework-c8y @ git+https://github.com/reubenmiller/robotframework-c8y.git@0.42.3
 robotframework-devicelibrary[docker] @ git+https://github.com/reubenmiller/robotframework-devicelibrary.git@1.17.1
 robotframework-tidy~=4.14.0
 robotframework-robocop~=5.5.0
