@@ -48,7 +48,7 @@ RUN wget -O - https://thin-edge.io/install-services.sh | sh -s -- s6_overlay \
         # might not have access to it
         # Note: Volumes should be configured to persist the docker compose files
         docker-cli-compose \
-        tedge-container-plugin-ng \
+        "tedge-container-plugin-ng<2.3.0" \
     # Support updating from older images which still use the deprecated self type
     && ln -s /usr/bin/tedge-container /etc/tedge/sm-plugins/self
 
