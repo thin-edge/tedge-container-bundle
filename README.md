@@ -29,7 +29,9 @@ The following are required in order to deploy the container
 
 [Option 1: On Host Network](./docs/CONTAINER_OPTION1.md)
 
-[Option 2: Container network (Recommended)](./docs/CONTAINER_OPTION2.md)
+[Option 2a (Self-Signed Certificates): Container network (Recommended)](./docs/CONTAINER_OPTION2.md)
+
+[Option 2b (Cumulocity Certificate Authority Preview): Container network (Recommended)](./docs/CONTAINER_OPTION2_with_ca.md)
 
 
 ### Settings
