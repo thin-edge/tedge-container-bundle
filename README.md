@@ -118,6 +118,17 @@ Note: These instructions use the Cumulocity certificate-authority feature and a 
 
 3. Click on the registration url to be redirected to the Cumulocity URL in your browser and confirm the registration
 
+
+**Notes**
+
+You can change the default device enrollment by setting the following environment variables on the container. 
+
+```sh
+C8Y_DOMAIN=example-demo.eu-latest.cumulocity.com
+DEVICE_ID=tedge_mydevice001
+DEVICE_ONE_TIME_PASSWORD=<max_32_chars>
+```
+
 ## Project structure
 
 |Directory|Description|
