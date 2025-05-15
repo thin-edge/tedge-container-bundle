@@ -29,7 +29,9 @@ The following are required in order to deploy the container
 
 [Option 1: On Host Network](./docs/CONTAINER_OPTION1.md)
 
-[Option 2: Container network (Recommended)](./docs/CONTAINER_OPTION2.md)
+[Option 2a (Self-Signed Certificates): Container network (Recommended)](./docs/CONTAINER_OPTION2.md)
+
+[Option 2b (Cumulocity Certificate Authority Preview): Container network (Recommended)](./docs/CONTAINER_OPTION2_with_ca.md)
 
 
 ### Settings
@@ -103,6 +105,12 @@ After the project pre-requisites have been installed, you can start the containe
 #### Cumulocity Certificate Authority (Preview)
 
 Note: These instructions use the Cumulocity certificate-authority feature and a UI change (pre-filling registration via a URL) which might not be deployed on your tenant.
+
+**For Users**
+
+See these [Instructions](./docs/CONTAINER_OPTION2_with_ca.md) which will detail how to start a tedge-container-bundle project using the new Cumulocity certificate-authority feature and a pre-built image.
+
+**For Developers with go-c8y-cli**
 
 1. Active your Cumulocity session using go-c8y-cli
 
