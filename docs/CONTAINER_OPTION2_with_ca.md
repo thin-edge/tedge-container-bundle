@@ -112,12 +112,18 @@ NOTE: These instructions use the Cumulocity Certificate Authority feature which 
       tedge:
         image: ghcr.io/thin-edge/tedge-container-bundle
         restart: always
-          env_file:
-            - .env
+        environment:
+          - CA=c8y
+        env_file:
+          - .env
         ports:
-          - 127.0.0.1:1883:1883
-          - 127.0.0.1:8000:8000
-          - 127.0.0.1:8001:8001
+         - 127.0.0.1:1883:1883
+         - 127.0.0.1:8000:8000
+         - 127.0.0.1:8001:8001
+        # When using docker, add access to the host
+        # if you want to be able to ssh into the host from the container
+        extra_hosts:
+          - host.docker.internal:host-gateway
         tmpfs:
           - /tmp
         volumes:
