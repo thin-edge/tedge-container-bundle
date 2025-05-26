@@ -12,6 +12,9 @@ CONTAINER_NAME=${CONTAINER_NAME:-"tedge"}
 DEBUG=${DEBUG:-0}
 CA=${CA:-c8y}
 DEVICE_ONE_TIME_PASSWORD=${DEVICE_ONE_TIME_PASSWORD:-}
+AUTH_TYPE=${AUTH_TYPE:-certificate}
+C8Y_DEVICE_USER=${C8Y_DEVICE_USER:-}
+C8Y_DEVICE_PASSWORD=${C8Y_DEVICE_PASSWORD:-}
 
 ACTION="$1"
 shift
@@ -24,6 +27,18 @@ while [ $# -gt 0 ]; do
             ;;
         --device-id)
             DEVICE_ID="$2"
+            shift
+            ;;
+        --auth-type)
+            AUTH_TYPE="$2"
+            shift
+            ;;
+        --c8y-device-user)
+            C8Y_DEVICE_USER="$2"
+            shift
+            ;;
+        --c8y-device-password)
+            C8Y_DEVICE_PASSWORD="$2"
             shift
             ;;
         --ca)
@@ -192,6 +207,9 @@ start() {
         -v "device-certs:/etc/tedge/device-certs" \
         -v "tedge:/data/tedge" \
         -e DEVICE_ID="$DEVICE_ID" \
+        -e "TEDGE_C8Y_AUTH_METHOD=auto" \
+        -e "C8Y_DEVICE_USER=$C8Y_DEVICE_USER" \
+        -e "C8Y_DEVICE_PASSWORD=$C8Y_DEVICE_PASSWORD" \
         -e CA="$CA" \
         -e DEVICE_ONE_TIME_PASSWORD="$DEVICE_ONE_TIME_PASSWORD" \
         -e TEDGE_C8Y_OPERATIONS_AUTO_LOG_UPLOAD=always \
@@ -236,9 +254,16 @@ case "$ACTION" in
         check_engine
         build
         prepare
-        if [ "$CA" = "self-signed" ]; then
-            bootstrap_certificate
-        fi
+        case "$AUTH_TYPE" in
+            certificate)
+                if [ "$CA" = "self-signed" ]; then
+                    bootstrap_certificate
+                fi
+                ;;
+            basic)
+                # Do nothing as the required values will be passed via env variables
+                ;;
+        esac
         start
         ;;
     stop)
