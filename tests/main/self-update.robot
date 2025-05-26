@@ -83,6 +83,6 @@ Self update using software update operation using Container type
     ...    {"name": "tedge", "version": "ghcr.io/thin-edge/tedge-container-bundle:99.99.2", "softwareType": "container"}
     ...    {"name": "app20", "version": "docker.io/library/nginx:1-alpine", "softwareType": "container"}
 
-    ${operation}=    Execute Shell Command    tedge config get c8y.availability.interval
+    ${operation}=    Execute Shell Command    tedge config get c8y.availability.interval 2>/dev/null
     ${operation}=    Operation Should Be SUCCESSFUL    ${operation}
     Should Be Equal As Strings    ${operation["c8y_Command"]["result"]}    61m${\n}
