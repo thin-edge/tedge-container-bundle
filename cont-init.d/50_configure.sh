@@ -86,6 +86,55 @@ load_from_file() {
     echo "Loading device certificates from file (no-op)"
 }
 
+get_auth_mode() {
+    value=$(tedge config get c8y.auth_method ||:)
+    output=certificate
+    case "$value" in
+        auto)
+            if [ -f "$(tedge config get c8y.credentials_path)" ]; then
+                output=basic
+            fi
+            ;;
+        basic)
+            output=basic
+            ;;
+        certificate)
+            output=certificate
+            ;;
+    esac
+    echo "$output"
+}
+
+load_c8y_basic_auth_from_env() {
+    if [ -z "$C8Y_DEVICE_USER" ] && [ -z "$C8Y_DEVICE_PASSWORD" ]; then
+        return 1
+    fi
+
+    echo "Loading device basic auth credentials from environment variables" >&2
+    set-c8y-basic-auth.sh "$C8Y_DEVICE_USER" "$C8Y_DEVICE_PASSWORD"
+}
+
+load_c8y_basic_auth_from_secrets() {
+    if [ ! -f /run/secrets/credentials ]; then
+        return 1
+    fi
+
+    echo "Loading device basic auth credentials from docker secrets" >&2
+    CREDENTIALS_PATH=$(tedge config get c8y.credentials_path)
+    cat /run/secrets/credentials > "$CREDENTIALS_PATH"
+    chmod 600 "$CREDENTIALS_PATH"
+}
+
+load_c8y_basic_auth_from_file() {
+    CREDENTIALS_PATH=$(tedge config get c8y.credentials_path)
+    if [ ! -f "$CREDENTIALS_PATH" ]; then
+        return 1
+    fi
+
+    # Don't actually do anything, but confirm the presence of device credentials
+    echo "Loading device basic auth credentials from file (no-op)"
+}
+
 create_tedge_config_symlink() {
     # Store the tedge.toml under the data dir, and
     # use a symlink from /etc/tedge/tedge.toml to point to the data dir.
@@ -138,17 +187,22 @@ fi
 AGENT_STATE=$(tedge config get agent.state.path)
 mkdir -p "$AGENT_STATE"
 
-#
-# Try loading the device certificates from several locations, taking the first successful function
+# Try loading device and basic auth from multiple locations taking the first successful function
 # Don't fail as users are allowed to start up a container without a device certificate (e.g. when only running the tedge-agent)
-#
 load_from_env || load_from_secrets || load_from_file ||:
 
+load_c8y_basic_auth_from_env || load_c8y_basic_auth_from_secrets || load_c8y_basic_auth_from_file ||:
 
 # Support variable set by go-c8y-cli
 if [ -n "$C8Y_DOMAIN" ] && [ -z "${TEDGE_C8Y_URL:-}" ]; then
     echo "Setting c8y.url from C8Y_DOMAIN env variable. $C8Y_DOMAIN" >&2
     tedge config set c8y.url "$C8Y_DOMAIN"
+fi
+
+# set device.id for basic auth case which requires it, though when
+# using a device certificate, the device.id will take precedence
+if [ -n "$DEVICE_ID" ]; then
+    tedge config set device.id "$DEVICE_ID"
 fi
 
 random_sleep() {
@@ -190,6 +244,9 @@ https://${TARGET_URL}/apps/devicemanagement/index.html#/deviceregistration?exter
 EOT
 }
 
+# Resolve which auth mode is being used
+AUTH_METHOD=$(get_auth_mode)
+
 #
 # Connect the mappers (if they are configured and not already connected)
 #
@@ -199,26 +256,30 @@ for MAPPER in $MAPPERS; do
 
         case "$MAPPER" in
             c8y)
-                if [ "$CA" = "c8y" ]; then
-                    # Register device using the Cumulocity certificate-authority feature
-                    PUBLIC_CERT=$(tedge config get device.cert_path 2>/dev/null ||:)
-                    if [ ! -f "$PUBLIC_CERT" ]; then
-                        if [ -z "$DEVICE_ONE_TIME_PASSWORD" ]; then
-                            DEVICE_ONE_TIME_PASSWORD=$(get_random_code)
-                            SHOW_REGISTRATION_BANNER=1
-                        fi
+                case "$AUTH_METHOD" in
+                    certificate)
+                        if [ "$CA" = "c8y" ]; then
+                            # Register device using the Cumulocity certificate-authority feature
+                            PUBLIC_CERT=$(tedge config get device.cert_path 2>/dev/null ||:)
+                            if [ ! -f "$PUBLIC_CERT" ]; then
+                                if [ -z "$DEVICE_ONE_TIME_PASSWORD" ]; then
+                                    DEVICE_ONE_TIME_PASSWORD=$(get_random_code)
+                                    SHOW_REGISTRATION_BANNER=1
+                                fi
 
-                        if [ "$SHOW_REGISTRATION_BANNER" = 1 ]; then
-                            show_registration_banner
-                        fi
+                                if [ "$SHOW_REGISTRATION_BANNER" = 1 ]; then
+                                    show_registration_banner
+                                fi
 
-                        # Download certificate
-                        echo "Downloading certificate. device-id=$DEVICE_ID" >&2
-                        if ! tedge cert download c8y --device-id "$DEVICE_ID" --one-time-password "$DEVICE_ONE_TIME_PASSWORD" --retry-every 5s --max-timeout 300s; then
-                            echo "WARNING: Failed to download certificate" >&2
+                                # Download certificate
+                                echo "Downloading certificate. device-id=$DEVICE_ID" >&2
+                                if ! tedge cert download c8y --device-id "$DEVICE_ID" --one-time-password "$DEVICE_ONE_TIME_PASSWORD" --retry-every 5s --max-timeout 300s; then
+                                    echo "WARNING: Failed to download certificate" >&2
+                                fi
+                            fi
                         fi
-                    fi
-                fi
+                    ;;
+                esac
                 ;;
         esac
 

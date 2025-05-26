@@ -59,6 +59,8 @@ RUN wget -O - https://thin-edge.io/install-services.sh | sh -s -- s6_overlay \
 # TODO: Can thin-edge.io set permissions during installation?
 RUN usermod -u "$USERID" tedge \
     && groupmod -g "$GROUPID" tedge \
+    # create empty folder so basic auth credentials can be mounted to it
+    && mkdir -p /etc/tedge/credentials \
     && chown -R tedge:tedge /etc/tedge \
     && chown -R tedge:tedge /var/tedge \
     && echo "tedge  ALL = (ALL) NOPASSWD:SETENV: /usr/bin/tedge, /etc/tedge/sm-plugins/[a-zA-Z0-9]*, /bin/sync, /sbin/init, /usr/bin/tedgectl, /bin/kill, /usr/bin/tedge-container, /usr/bin/docker, /usr/bin/podman, /usr/bin/podman-remote, /usr/bin/podman-compose" >/etc/sudoers.d/tedge \
@@ -90,6 +92,8 @@ COPY files/tedge/log_upload.toml /etc/tedge/operations/
 COPY files/tedge/log_upload_container.toml /etc/tedge/operations/
 # Script to fix the permissions / ownership which is called on container startup
 COPY files/tedge/fix-permissions.sh /usr/bin/
+# Helper script to set the Cumulocity Basic Auth more easily
+COPY files/tedge/set-c8y-basic-auth.sh /usr/bin/
 
 
 ENV S6_BEHAVIOUR_IF_STAGE2_FAILS=2

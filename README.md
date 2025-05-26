@@ -33,6 +33,8 @@ The following are required in order to deploy the container
 
 [Option 2b (Cumulocity Certificate Authority Preview): Container network (Recommended)](./docs/CONTAINER_OPTION2_with_ca.md)
 
+[Option 2c (Basic Auth): Container network (Recommended)](./docs/CONTAINER_OPTION2_with_basic_auth.md)
+
 
 ### Settings
 
