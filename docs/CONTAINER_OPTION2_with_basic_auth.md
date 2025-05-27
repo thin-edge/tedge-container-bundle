@@ -23,16 +23,21 @@
     c8y deviceregistration register-basic --id tedge_abcdef
     ```
 
-1. Set some environment variable based on the Cumulocity instance you wish to connect to, and the device id
+    Take note of the `username` and `password` fields in the output, as you'll need these in next step.
+
+1. Set some environment variable on the console based on the Cumulocity instance you wish to connect to, and the device id
 
     ```sh
     export TEDGE_C8Y_URL="example-demo.eu-latest.cumulocity.com"
     export DEVICE_ID="tedge_abcdef"
     export C8Y_DEVICE_USER="t12345/device_${DEVICE_ID}"
-    export C8Y_DEVICE_PASSWORD="<<code_max_32_chars>>"
+    export C8Y_DEVICE_PASSWORD='<<code_max_32_chars>>'
     ```
 
-    **Note** The username must be in the form of `{tenant}/device_{name}`.
+    **Notes**
+
+    * The username must be in the form of `{tenant}/device_{name}`
+    * The password should use single quotes to avoid problems if it contains a `$` character (as a shell would other think it is a variable reference)
 
 1. Create a docker volume which will be used to store the device credentials, and a volume for the tedge and mosquitto data
 
@@ -114,13 +119,18 @@ Note: This docker compose example uses environment variable to set the basic aut
 
     ```sh
     TEDGE_C8Y_URL="example-demo.eu-latest.cumulocity.com"
-    export DEVICE_ID="tedge_abcdef"
-    export C8Y_DEVICE_USER="t12345/device_${DEVICE_ID}"
-    export C8Y_DEVICE_PASSWORD="<<code_max_32_chars>>"
+    DEVICE_ID="tedge_abcdef"
+    C8Y_DEVICE_USER="t12345/device_tedge_abcdef"
+    C8Y_DEVICE_PASSWORD='<<code_max_32_chars>>'
 
     # any other custom thin-edge.io configuration that you want
     TEDGE_C8Y_OPERATIONS_AUTO_LOG_UPLOAD=always
     ```
+
+    **Notes**
+
+    * The username must be in the form of `{tenant}/device_{name}`
+    * The password should use single quotes to avoid problems if it contains a `$` character (as a shell would other think it is a variable reference)
 
 1. Create a `docker-compose.yaml` file with the following contents
 
