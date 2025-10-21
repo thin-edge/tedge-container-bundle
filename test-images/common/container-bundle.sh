@@ -172,6 +172,17 @@ bootstrap_certificate() {
         tedge cert upload c8y
 }
 
+ wait_for_path() {
+    path="$1"
+    wait_seconds="${2:-30}"
+    waited=0
+    while [ ! -e "$path" ] && [ "$waited" -lt "$wait_seconds" ]; do
+        echo "Waiting for $path ($waited/$wait_seconds)..."
+        sleep 1
+        waited=$((waited + 1))
+    done
+}
+
 start() {
     CONTAINER_OPTIONS=""
 
@@ -184,10 +195,13 @@ start() {
         podman)
             # Mount socket to a path expected by the container under test
             # In podman, host.containers.internal is accessible by default
-            if [ -e /run/podman/podman.sock ]; then
-                CONTAINER_OPTIONS="$CONTAINER_OPTIONS -v /run/podman/podman.sock:/var/run/docker.sock:rw"
+            SOCKET_PATH="/run/podman/podman.sock"
+            # Wait for the podman socket to exist, up to 30 seconds
+            wait_for_path "$SOCKET_PATH" 30
+            if [ -e "$SOCKET_PATH" ]; then
+                CONTAINER_OPTIONS="$CONTAINER_OPTIONS -v $SOCKET_PATH:/var/run/docker.sock:rw"
             else
-                echo "Could not the podman socket"
+                echo "The podman socket does not exist. path=$SOCKET_PATH"
                 exit 1
             fi
             ;;

@@ -63,8 +63,13 @@ RUN usermod -u "$USERID" tedge \
     && mkdir -p /etc/tedge/credentials \
     && chown -R tedge:tedge /etc/tedge \
     && chown -R tedge:tedge /var/tedge \
-    && echo "tedge  ALL = (ALL) NOPASSWD:SETENV: /usr/bin/tedge, /etc/tedge/sm-plugins/[a-zA-Z0-9]*, /bin/sync, /sbin/init, /usr/bin/tedgectl, /bin/kill, /usr/bin/tedge-container, /usr/bin/docker, /usr/bin/podman, /usr/bin/podman-remote, /usr/bin/podman-compose" >/etc/sudoers.d/tedge \
-    && echo "tedge  ALL = (ALL) NOPASSWD:SETENV: /usr/bin/tedge-write /etc/*" >> /etc/sudoers.d/tedge \
+    # original tedge settings
+    && echo "tedge    ALL = (ALL) NOPASSWD:SETENV: /usr/bin/tedge, /etc/tedge/sm-plugins/[a-zA-Z0-9]*, /bin/sync, /sbin/init" > /etc/sudoers.d/tedge  \
+    && echo "tedge    ALL = (ALL) NOPASSWD:SETENV: /usr/bin/tedge-write /etc/*" >> /etc/sudoers.d/tedge \
+    && echo "tedge    ALL = (ALL) NOPASSWD:SETENV: /usr/share/tedge/log-plugins/[a-zA-Z0-9]*" >> /etc/sudoers.d/tedge \
+    # additional sudoers rules
+    && echo "tedge  ALL = (ALL) NOPASSWD:SETENV: /bin/sync, /sbin/init, /usr/bin/tedgectl, /bin/kill" >/etc/sudoers.d/tedge-system \
+    && echo "tedge  ALL = (ALL) NOPASSWD:SETENV: /usr/bin/tedge-container, /usr/bin/docker, /usr/bin/podman, /usr/bin/podman-remote, /usr/bin/podman-compose" >/etc/sudoers.d/tedge-containers \
     && echo "tedge  ALL = (ALL) NOPASSWD:SETENV: /usr/bin/fix-permissions.sh" >> /etc/sudoers.d/tedge-fix-permissions
 # Custom init. scripts - e.g. write env variables data to files
 COPY cont-init.d/*  /etc/cont-init.d/
