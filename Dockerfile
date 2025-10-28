@@ -1,4 +1,4 @@
-ARG TEDGE_TAG=1.6.0
+ARG TEDGE_TAG=1.6.1
 # thin-edge.io base image name: tedge, tedge-main
 ARG TEDGE_IMAGE=tedge
 FROM ghcr.io/thin-edge/${TEDGE_IMAGE}:${TEDGE_TAG}
