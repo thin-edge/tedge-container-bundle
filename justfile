@@ -3,7 +3,7 @@ set export
 
 IMAGE := env_var_or_default("IMAGE", "tedge-container-bundle")
 TEDGE_IMAGE := env_var_or_default("TEDGE_IMAGE", "tedge")
-TEDGE_TAG := env_var_or_default("TEDGE_TAG", "1.6.0")
+TEDGE_TAG := env_var_or_default("TEDGE_TAG", "1.6.1")
 
 REGISTRY := "ghcr.io"
 REPO_OWNER := "thin-edge"
