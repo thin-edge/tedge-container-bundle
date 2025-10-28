@@ -14,6 +14,18 @@ RELEASE_VERSION := env_var_or_default("RELEASE_VERSION", `date +'%Y%m%d.%H%M'`)
 # Test Variables
 TEST_IMAGE := env_var_or_default("TEST_IMAGE", "docker:27-dind")
 
+# check if command is running from within a CI environment, to prevent actions from being run locally
+[private]
+ci-only:
+    #!/bin/sh
+    case "${CI:-}" in
+        1|true|yes)
+            ;;
+        *)
+            echo "ERROR: Aborting. This command can only be run from the CI"
+            exit 1;
+            ;;
+    esac
 
 # Initialize a dotenv file for usage with a local debugger
 # WARNING: It will override any previously generated dotenv file
@@ -48,7 +60,7 @@ build OUTPUT_TYPE=DEFAULT_OUTPUT_TYPE VERSION='latest': build-setup
 #    just publish registry 1.2.0
 # Use oci-mediatypes=false to improve compatibility with older docker versions, e.g. <= 19.0.x
 # See https://github.com/docker/buildx/issues/1964#issuecomment-1644634461
-publish OUTPUT_TYPE=DEFAULT_OUTPUT_TYPE VERSION='latest': build-setup
+publish OUTPUT_TYPE=DEFAULT_OUTPUT_TYPE VERSION='latest': ci-only build-setup
     docker buildx build \
         --platform linux/arm/v6,linux/arm/v7,linux/amd64,linux/arm64 \
         --label "org.opencontainers.image.version={{VERSION}}" \
