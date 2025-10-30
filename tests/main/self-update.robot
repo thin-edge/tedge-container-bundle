@@ -63,10 +63,16 @@ Rollback when trying to install a non-tedge based image
 
 Self update using software update operation using Container type
     # Change a tedge.toml value to see if it is persisted
-    Execute Command    cmd=podman exec tedge test -L /etc/tedge/tedge.toml || docker exec tedge test -L /etc/tedge/tedge.toml    timeout=30
+    Execute Command
+    ...    cmd=podman exec tedge test -L /etc/tedge/tedge.toml || docker exec tedge test -L /etc/tedge/tedge.toml
+    ...    timeout=30
     ${operation}=    Execute Shell Command    tedge config set c8y.availability.interval 61m
     Operation Should Be SUCCESSFUL    ${operation}
-    
+
+    # Add some data in the container data dir
+    ${operation}=    Execute Shell Command    mkdir -p "$CONTAINER_DATA_DIR" && touch "$CONTAINER_DATA_DIR/foo"
+    Operation Should Be SUCCESSFUL    ${operation}
+
     # pre-condition
     Device Should Have Installed Software
     ...    {"name": "tedge", "version": "ghcr.io/thin-edge/tedge-container-bundle:99.99.1", "softwareType": "container"}
@@ -86,3 +92,7 @@ Self update using software update operation using Container type
     ${operation}=    Execute Shell Command    tedge config get c8y.availability.interval 2>/dev/null
     ${operation}=    Operation Should Be SUCCESSFUL    ${operation}
     Should Be Equal As Strings    ${operation["c8y_Command"]["result"]}    61m${\n}
+
+    # check if the file still exists
+    ${operation}=    Execute Shell Command    test -f "$CONTAINER_DATA_DIR/foo"
+    ${operation}=    Operation Should Be SUCCESSFUL    ${operation}

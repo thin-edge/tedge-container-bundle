@@ -133,6 +133,10 @@ ENV TEDGE_C8Y_PROXY_CLIENT_HOST=127.0.0.1
 ENV TEDGE_AGENT_STATE_PATH="$DATA_DIR/agent"
 ENV TEDGE_LOGS_PATH="$DATA_DIR/logs"
 
+# ensure tedge-container-plugin data is stored in a persistent directory
+ENV CONTAINER_DATA_DIR="$DATA_DIR/tedge-container-plugin/data"
+ENV CONTAINER_REGISTRY_CREDENTIALS_PATH="$DATA_DIR/tedge-container-plugin/credentials.toml"
+
 # Persist tedge.toml under /data/tedge/tedge.toml by using
 # a symlink from /etc/tedge/tedge.toml to /data/tedge/tedge.toml
 # This allows the tedge.toml to be maintained across updates
