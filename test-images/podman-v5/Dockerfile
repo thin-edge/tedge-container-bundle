@@ -1,4 +1,4 @@
-FROM quay.io/containers/podman:v5
+FROM quay.io/containers/podman:v5.7
 RUN systemctl enable podman.socket \
     && echo "enable podman.socket" > /usr/lib/systemd/system-preset/95-podman.preset \
     # create systemd-tmpfiles config to create a symlink for docker to the podman socket
