@@ -67,6 +67,7 @@ RUN usermod -u "$USERID" tedge \
     && echo "tedge    ALL = (ALL) NOPASSWD:SETENV: /usr/bin/tedge, /etc/tedge/sm-plugins/[a-zA-Z0-9]*, /bin/sync, /sbin/init" > /etc/sudoers.d/tedge  \
     && echo "tedge    ALL = (ALL) NOPASSWD:SETENV: /usr/bin/tedge-write /etc/*" >> /etc/sudoers.d/tedge \
     && echo "tedge    ALL = (ALL) NOPASSWD:SETENV: /usr/share/tedge/log-plugins/[a-zA-Z0-9]*" >> /etc/sudoers.d/tedge \
+    && echo "tedge    ALL = (ALL) NOPASSWD:SETENV: /usr/share/tedge/config-plugins/[a-zA-Z0-9]*" >> /etc/sudoers.d/tedge \
     # additional sudoers rules
     && echo "tedge  ALL = (ALL) NOPASSWD:SETENV: /bin/sync, /sbin/init, /usr/bin/tedgectl, /bin/kill" >/etc/sudoers.d/tedge-system \
     && echo "tedge  ALL = (ALL) NOPASSWD:SETENV: /usr/bin/tedge-container, /usr/bin/docker, /usr/bin/podman, /usr/bin/podman-remote, /usr/bin/podman-compose" >/etc/sudoers.d/tedge-containers \
