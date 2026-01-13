@@ -70,7 +70,9 @@ RUN usermod -u "$USERID" tedge \
     && echo "tedge    ALL = (ALL) NOPASSWD:SETENV: /usr/share/tedge/config-plugins/[a-zA-Z0-9]*" >> /etc/sudoers.d/tedge \
     # additional sudoers rules
     && echo "tedge  ALL = (ALL) NOPASSWD:SETENV: /bin/sync, /sbin/init, /usr/bin/tedgectl, /bin/kill" >/etc/sudoers.d/tedge-system \
-    && echo "tedge  ALL = (ALL) NOPASSWD:SETENV: /usr/bin/tedge-container, /usr/bin/docker, /usr/bin/podman, /usr/bin/podman-remote, /usr/bin/podman-compose" >/etc/sudoers.d/tedge-containers \
+    # respect all tedge-container-plugin env variables when running commands under sudo
+    && echo 'Defaults  env_keep += "CONTAINER_*"' >/etc/sudoers.d/tedge-containers \
+    && echo "tedge  ALL = (ALL) NOPASSWD:SETENV: /usr/bin/tedge-container, /usr/bin/docker, /usr/bin/podman, /usr/bin/podman-remote, /usr/bin/podman-compose" >>/etc/sudoers.d/tedge-containers \
     && echo "tedge  ALL = (ALL) NOPASSWD:SETENV: /usr/bin/fix-permissions.sh" >> /etc/sudoers.d/tedge-fix-permissions
 # Custom init. scripts - e.g. write env variables data to files
 COPY cont-init.d/*  /etc/cont-init.d/
