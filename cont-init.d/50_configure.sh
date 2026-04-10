@@ -25,6 +25,9 @@ DATA_DIR=${DATA_DIR:-/data/tedge}
 # to /data/tedge/tedge.toml, to allow persisting tedge.toml info across upgrades
 PERSIST_TEDGE_TOML=${PERSIST_TEDGE_TOML:-1}
 
+# migrate the tedge config to use mapper specific logic
+MIGRATE_TEDGE_CONFIG_V2=${MIGRATE_TEDGE_CONFIG_V2:-1}
+
 #
 # device certificate loaders
 #
@@ -181,6 +184,12 @@ fi
 
 if [ "$PERSIST_TEDGE_TOML" = 1 ]; then
     create_tedge_config_symlink
+fi
+
+# upgrade configuration
+if [ "$MIGRATE_TEDGE_CONFIG_V2" = 1 ]; then
+    tedge config upgrade ||:
+    tedge refresh-bridges ||:
 fi
 
 # Create the agent state folder
