@@ -1,4 +1,4 @@
-ARG TEDGE_TAG=1.7.1
+ARG TEDGE_TAG=2.0.0
 # thin-edge.io base image name: tedge, tedge-main
 ARG TEDGE_IMAGE=tedge
 FROM ghcr.io/thin-edge/${TEDGE_IMAGE}:${TEDGE_TAG}
@@ -144,6 +144,11 @@ ENV CONTAINER_REGISTRY_CREDENTIALS_PATH="$DATA_DIR/tedge-container-plugin/creden
 # a symlink from /etc/tedge/tedge.toml to /data/tedge/tedge.toml
 # This allows the tedge.toml to be maintained across updates
 ENV PERSIST_TEDGE_TOML=1
+
+# Persist the mappers configuration under /data/tedge/mappers by using
+# a symlink from /etc/tedge/mappers to /data/tedge/mappers.
+# This allows the mappers configuration to be maintained across updates
+ENV PERSIST_MAPPER_CONFIGS=1
 
 EXPOSE 1883
 EXPOSE 8000
