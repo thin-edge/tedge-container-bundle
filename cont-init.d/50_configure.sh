@@ -25,6 +25,11 @@ DATA_DIR=${DATA_DIR:-/data/tedge}
 # to /data/tedge/tedge.toml, to allow persisting tedge.toml info across upgrades
 PERSIST_TEDGE_TOML=${PERSIST_TEDGE_TOML:-1}
 
+# Use PERSIST_MAPPER_CONFIGS=1 to enable creating a symlink for the /etc/tedge/mappers/
+# directory to /data/tedge/mappers/, to allow persisting mapper config files (e.g.
+# /etc/tedge/mappers/c8y/mapper.toml) across container updates
+PERSIST_MAPPER_CONFIGS=${PERSIST_MAPPER_CONFIGS:-1}
+
 # migrate the tedge config to use mapper specific logic
 MIGRATE_TEDGE_CONFIG_V2=${MIGRATE_TEDGE_CONFIG_V2:-1}
 
@@ -173,6 +178,42 @@ create_tedge_config_symlink() {
     echo "Successfully created tedge.toml symlink" >&2
 }
 
+create_mapper_configs_symlink() {
+    # Store the mappers config directory under the data dir, and
+    # use a symlink from /etc/tedge/mappers to point to the data dir.
+    # This enables users to retain customized mapper config files (e.g.
+    # /etc/tedge/mappers/c8y/mapper.toml) across container updates.
+    # A directory-level symlink is used so that any future mappers are
+    # also persisted without needing to enumerate them explicitly.
+    DATA_DIR_MAPPERS="$DATA_DIR/mappers"
+    ETC_TEDGE_MAPPERS="/etc/tedge/mappers"
+
+    if [ ! -d "$DATA_DIR" ]; then
+        echo "Warning: Data dir does not exist, so skipping creation of mappers symlink under $DATA_DIR" >&2
+        return 0
+    fi
+
+    if [ -L "$ETC_TEDGE_MAPPERS" ]; then
+        echo "mappers symlink already exists. path=$ETC_TEDGE_MAPPERS" >&2
+        return 0
+    fi
+
+    # Seed the data dir with any existing mapper configs from the image,
+    # using no-overwrite so that user data in the volume always takes precedence
+    if [ -d "$ETC_TEDGE_MAPPERS" ]; then
+        echo "Seeding $DATA_DIR_MAPPERS from existing $ETC_TEDGE_MAPPERS" >&2
+        mkdir -p "$DATA_DIR_MAPPERS"
+        cp -rn "$ETC_TEDGE_MAPPERS/." "$DATA_DIR_MAPPERS/"
+        rm -rf "$ETC_TEDGE_MAPPERS"
+    else
+        mkdir -p "$DATA_DIR_MAPPERS"
+    fi
+
+    echo "Creating symlink from $DATA_DIR_MAPPERS to $ETC_TEDGE_MAPPERS" >&2
+    ln -sf "$DATA_DIR_MAPPERS" "$ETC_TEDGE_MAPPERS" || echo "Warning: Failed to create mappers symlink" >&2
+    echo "Successfully created mappers symlink" >&2
+}
+
 ############
 # Main
 ############
@@ -184,6 +225,10 @@ fi
 
 if [ "$PERSIST_TEDGE_TOML" = 1 ]; then
     create_tedge_config_symlink
+fi
+
+if [ "$PERSIST_MAPPER_CONFIGS" = 1 ]; then
+    create_mapper_configs_symlink
 fi
 
 # upgrade configuration

@@ -66,6 +66,9 @@ Self update using software update operation using Container type
     Execute Command
     ...    cmd=podman exec tedge test -L /etc/tedge/tedge.toml || docker exec tedge test -L /etc/tedge/tedge.toml
     ...    timeout=30
+    Execute Command
+    ...    cmd=podman exec tedge test -L /etc/tedge/mappers || docker exec tedge test -L /etc/tedge/mappers
+    ...    timeout=30
     ${operation}=    Execute Shell Command    tedge config set c8y.availability.interval 61m
     Operation Should Be SUCCESSFUL    ${operation}
 
