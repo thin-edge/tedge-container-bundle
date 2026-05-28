@@ -93,7 +93,7 @@ lint *ARGS:
 # Build test images
 build-test: build-test-bundles
     echo "Creating test infrastructure image"
-    [ -d "./test-images/{{TEST_IMAGE}}" ] && docker build \
+    [ -d "./test-images/{{TEST_IMAGE}}" ] && docker buildx build \
         --load -t {{TEST_IMAGE}} \
         -f ./test-images/{{TEST_IMAGE}}/Dockerfile . || docker pull "{{TEST_IMAGE}}"
 
