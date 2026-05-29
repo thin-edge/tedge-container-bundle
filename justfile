@@ -3,7 +3,7 @@ set export
 
 IMAGE := env_var_or_default("IMAGE", "tedge-container-bundle")
 TEDGE_IMAGE := env_var_or_default("TEDGE_IMAGE", "tedge")
-TEDGE_TAG := env_var_or_default("TEDGE_TAG", "2.0.0")
+TEDGE_TAG := env_var_or_default("TEDGE_TAG", "2.0.1")
 
 REGISTRY := "ghcr.io"
 REPO_OWNER := "thin-edge"
@@ -93,7 +93,7 @@ lint *ARGS:
 # Build test images
 build-test: build-test-bundles
     echo "Creating test infrastructure image"
-    [ -d "./test-images/{{TEST_IMAGE}}" ] && docker build \
+    [ -d "./test-images/{{TEST_IMAGE}}" ] && docker buildx build \
         --load -t {{TEST_IMAGE}} \
         -f ./test-images/{{TEST_IMAGE}}/Dockerfile . || docker pull "{{TEST_IMAGE}}"
 
