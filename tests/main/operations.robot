@@ -40,20 +40,22 @@ Execute Shell Command
 
 Install application using docker compose
     ${file_url}=    Cumulocity.Create Inventory Binary
-    ...    nodered
+    ...    nginx
     ...    docker-compose
-    ...    file=${CURDIR}/files/docker-compose.nodered.yaml
+    ...    file=${CURDIR}/files/docker-compose.nginx.yaml
     ${operation}=    Cumulocity.Install Software
-    ...    {"name": "nodered-instance1", "version": "1.0.0", "softwareType": "container-group", "url": "${file_url}"}
+    ...    {"name": "nginx-instance1", "version": "1.0.0", "softwareType": "container-group", "url": "${file_url}"}
     Cumulocity.Operation Should Be SUCCESSFUL    ${operation}    timeout=60
     ${software}=    Device Should Have Installed Software
-    ...    {"name": "nodered-instance1", "version": "1.0.0", "softwareType": "container-group"}
+    ...    {"name": "nginx-instance1", "version": "1.0.0", "softwareType": "container-group"}
 
     Cumulocity.Should Have Services
     ...    service_type=container-group
-    ...    name=nodered-instance1@node-red
+    ...    name=nginx-instance1@web
     ...    status=up
     ...    max_count=1
+
+    [Teardown]    Collect Container Logs    container_name=nginx-instance1-web-1
 
 Get Container Logs
     ${operation}=    Cumulocity.Get Log File    container    search_text=tedge    maximum_lines=100
@@ -85,3 +87,7 @@ Get Logfile Request
     ...    fragments={"c8y_LogfileRequest": {"dateFrom":"${start_timestamp}","dateTo":"${end_timestamp}","logFile":"${name}","maximumLines":${max_lines},"searchText":"${search_text}"}}
     ${operation}=    Operation Should Be SUCCESSFUL    ${operation}
     Should Not Be Empty    ${operation["c8y_LogfileRequest"]["file"]}
+
+Collect Container Logs
+    [Arguments]    ${container_name}
+    Execute Command    cmd=docker logs --tail 1000 ${container_name} 2>&1 || podman logs --tail 1000 ${container_name}    ignore_exit_code=${True}

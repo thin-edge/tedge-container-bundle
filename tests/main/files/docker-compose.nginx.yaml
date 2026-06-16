@@ -1,0 +1,3 @@
+services:
+  web:
+    image: ghcr.io/thin-edge/test-images/nginx
