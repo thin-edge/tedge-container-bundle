@@ -304,6 +304,10 @@ AUTH_METHOD=$(get_auth_mode)
 #
 # Connect the mappers (if they are configured and not already connected)
 #
+
+# create local mapper folder
+mkdir -p /etc/tedge/mappers/local
+
 MAPPERS="c8y az aws"
 for MAPPER in $MAPPERS; do
     if tedge config get "${MAPPER}.url" 2>/dev/null; then
