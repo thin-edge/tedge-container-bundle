@@ -55,6 +55,8 @@ Install application using docker compose
     ...    status=up
     ...    max_count=1
 
+    [Teardown]    Collect Container Logs    container_name=nodered-instance1-node-red-1
+
 Get Container Logs
     ${operation}=    Cumulocity.Get Log File    container    search_text=tedge    maximum_lines=100
     Cumulocity.Operation Should Be SUCCESSFUL    ${operation}
@@ -85,3 +87,7 @@ Get Logfile Request
     ...    fragments={"c8y_LogfileRequest": {"dateFrom":"${start_timestamp}","dateTo":"${end_timestamp}","logFile":"${name}","maximumLines":${max_lines},"searchText":"${search_text}"}}
     ${operation}=    Operation Should Be SUCCESSFUL    ${operation}
     Should Not Be Empty    ${operation["c8y_LogfileRequest"]["file"]}
+
+Collect Container Logs
+    [Arguments]    ${container_name}
+    Execute Command    cmd=docker logs --tail 1000 ${container_name} 2>&1 || podman logs --tail 1000 ${container_name}    ignore_exit_code=${True}

@@ -1,6 +1,7 @@
 services:
   node-red:
     image: nodered/node-red:latest
+    restart: always
     environment:
       - NODE_RED_ENABLE_PROJECTS=true
       - TZ=Europe/Amsterdam
