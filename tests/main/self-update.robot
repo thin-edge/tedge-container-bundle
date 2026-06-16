@@ -55,7 +55,7 @@ Rollback when trying to install a non-tedge based image
     ...    timeout=10
 
     ${operation}=    Cumulocity.Install Software
-    ...    {"name": "tedge", "version": "docker.io/library/alpine:latest", "softwareType": "container"}
+    ...    {"name": "tedge", "version": "ghcr.io/thin-edge/test-images/alpine:latest", "softwareType": "container"}
 
     Cumulocity.Operation Should Be FAILED    ${operation}    timeout=120
     Device Should Have Installed Software
@@ -81,16 +81,16 @@ Self update using software update operation using Container type
     ...    {"name": "tedge", "version": "ghcr.io/thin-edge/tedge-container-bundle:99.99.1", "softwareType": "container"}
     ...    timeout=10
     Device Should Not Have Installed Software
-    ...    {"name": "app20", "version": "docker.io/library/nginx:1-alpine", "softwareType": "container"}    timeout=10
+    ...    {"name": "app20", "version": "ghcr.io/thin-edge/test-images/nginx:latest", "softwareType": "container"}    timeout=10
 
     ${operation}=    Cumulocity.Install Software
     ...    {"name": "tedge", "version": "ghcr.io/thin-edge/tedge-container-bundle:99.99.2", "softwareType": "container"}
-    ...    {"name": "app20", "version": "docker.io/library/nginx:1-alpine", "softwareType": "container"}
+    ...    {"name": "app20", "version": "ghcr.io/thin-edge/test-images/nginx:latest", "softwareType": "container"}
 
     Cumulocity.Operation Should Be SUCCESSFUL    ${operation}    timeout=180
     Device Should Have Installed Software
     ...    {"name": "tedge", "version": "ghcr.io/thin-edge/tedge-container-bundle:99.99.2", "softwareType": "container"}
-    ...    {"name": "app20", "version": "docker.io/library/nginx:1-alpine", "softwareType": "container"}
+    ...    {"name": "app20", "version": "ghcr.io/thin-edge/test-images/nginx:latest", "softwareType": "container"}
 
     ${operation}=    Execute Shell Command    tedge config get c8y.availability.interval 2>/dev/null
     ${operation}=    Operation Should Be SUCCESSFUL    ${operation}
