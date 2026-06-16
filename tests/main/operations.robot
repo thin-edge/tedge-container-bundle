@@ -40,22 +40,22 @@ Execute Shell Command
 
 Install application using docker compose
     ${file_url}=    Cumulocity.Create Inventory Binary
-    ...    nodered
+    ...    nginx
     ...    docker-compose
-    ...    file=${CURDIR}/files/docker-compose.nodered.yaml
+    ...    file=${CURDIR}/files/docker-compose.nginx.yaml
     ${operation}=    Cumulocity.Install Software
-    ...    {"name": "nodered-instance1", "version": "1.0.0", "softwareType": "container-group", "url": "${file_url}"}
+    ...    {"name": "nginx-instance1", "version": "1.0.0", "softwareType": "container-group", "url": "${file_url}"}
     Cumulocity.Operation Should Be SUCCESSFUL    ${operation}    timeout=60
     ${software}=    Device Should Have Installed Software
-    ...    {"name": "nodered-instance1", "version": "1.0.0", "softwareType": "container-group"}
+    ...    {"name": "nginx-instance1", "version": "1.0.0", "softwareType": "container-group"}
 
     Cumulocity.Should Have Services
     ...    service_type=container-group
-    ...    name=nodered-instance1@node-red
+    ...    name=nginx-instance1@web
     ...    status=up
     ...    max_count=1
 
-    [Teardown]    Collect Container Logs    container_name=nodered-instance1-node-red-1
+    [Teardown]    Collect Container Logs    container_name=nginx-instance1-web-1
 
 Get Container Logs
     ${operation}=    Cumulocity.Get Log File    container    search_text=tedge    maximum_lines=100
