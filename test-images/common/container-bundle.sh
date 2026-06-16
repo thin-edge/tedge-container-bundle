@@ -170,6 +170,28 @@ bootstrap_certificate() {
         -e "C8Y_PASSWORD=$C8Y_PASSWORD" \
         "$IMAGE" \
         tedge cert upload c8y
+
+    # WORKAROUND: wait until the certificate is trusted
+    # FIXME: Should this be incorporated into the container startup script?
+    sleep 2
+    connect_attempt=0
+    MAX_CONNECT_ATTEMPTS=5
+    while [ "$connect_attempt" -lt "$MAX_CONNECT_ATTEMPTS" ]; do
+        if docker run --rm \
+            -v "device-certs:/etc/tedge/device-certs" \
+            -e "TEDGE_C8Y_URL=$TEDGE_C8Y_URL" \
+            -e "C8Y_USER=$C8Y_USER" \
+            -e "C8Y_PASSWORD=$C8Y_PASSWORD" \
+            "$IMAGE" \
+            tedge connect c8y; then
+                # successfully connected
+                echo "Successfully connected" >&2
+                break
+        fi
+        echo "Connection attempt failed. retrying" >&2
+        connect_attempt=$((connect_attempt + 1))
+        sleep 5
+    done
 }
 
  wait_for_path() {
