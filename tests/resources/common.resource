@@ -28,7 +28,7 @@ Setup Device
     ...    container-bundle.sh start --device-id '${DEVICE_ID}' --c8y-url '${C8Y_CONFIG.host}' --ca c8y --one-time-password '${credentials.one_time_password}' --image "${image}" --debug 2>&1
 
     Set Suite Variable    ${DEVICE_ID}
-    Cumulocity.External Identity Should Exist    ${DEVICE_ID}
+    Cumulocity.External Identity Should Exist    ${DEVICE_ID}    timeout=120
 
 Setup Device With Self Signed Certificate
     [Arguments]    ${image}=
@@ -40,7 +40,7 @@ Setup Device With Self Signed Certificate
     ...    container-bundle.sh start --device-id '${DEVICE_ID}' --c8y-url '${C8Y_CONFIG.host}' --ca self-signed --image "${image}" --debug 2>&1
 
     Set Suite Variable    ${DEVICE_ID}
-    Cumulocity.External Identity Should Exist    ${DEVICE_ID}
+    Cumulocity.External Identity Should Exist    ${DEVICE_ID}    timeout=120
 
 Setup Device With Basic Auth Credentials
     [Arguments]    ${image}=
