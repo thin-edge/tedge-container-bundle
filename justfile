@@ -90,8 +90,11 @@ lint *ARGS:
 # System Tests
 # --------------------------------------------
 
-# Build test images
-build-test: build-test-bundles
+# Build test images (bundles + test infrastructure image)
+build-test: build-test-bundles build-test-image
+
+# Build the test infrastructure image (container engine environment)
+build-test-image:
     echo "Creating test infrastructure image"
     [ -d "./test-images/{{TEST_IMAGE}}" ] && docker buildx build \
         --load -t {{TEST_IMAGE}} \
