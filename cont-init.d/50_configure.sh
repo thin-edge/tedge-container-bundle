@@ -11,6 +11,7 @@ SHOW_REGISTRATION_BANNER=${SHOW_REGISTRATION_BANNER:-0}
 # afterwards the device.id is taken from the device's certificate
 DEVICE_ID=${DEVICE_ID:-}
 DEVICE_ONE_TIME_PASSWORD=${DEVICE_ONE_TIME_PASSWORD:-}
+FIX_PERMISSIONS=${FIX_PERMISSIONS:-1}
 
 # Use default value based on the hostname
 if [ -z "$DEVICE_ID" ]; then
@@ -218,9 +219,15 @@ create_mapper_configs_symlink() {
 # Main
 ############
 # fix permissions in case if the tedge user has had its uid/gid changed across a container update
-if command -V sudo >/dev/null 2>&1; then
-    export DATA_DIR
-    sudo -E DATA_DIR="$DATA_DIR" /usr/bin/fix-permissions.sh
+if [ "$FIX_PERMISSIONS" = 1 ]; then
+    RUN_CMD=
+    if command -V sudo >/dev/null 2>&1 && grep -q '^NoNewPrivs:[[:space:]]*0$' /proc/self/status; then
+        export DATA_DIR
+        RUN_CMD="sudo -E DATA_DIR=$DATA_DIR"
+    else
+        echo "Warning: sudo is not installed and/or NoNewPrivs is active. Running command as current user" >&2
+    fi
+    $RUN_CMD /usr/bin/fix-permissions.sh
 fi
 
 if [ "$PERSIST_TEDGE_TOML" = 1 ]; then
