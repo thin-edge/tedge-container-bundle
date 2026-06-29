@@ -3,7 +3,7 @@ ARG TEDGE_TAG=2.0.1
 ARG TEDGE_IMAGE=tedge
 FROM ghcr.io/thin-edge/${TEDGE_IMAGE}:${TEDGE_TAG}
 ARG TARGETPLATFORM
-ARG S6_OVERLAY_VERSION=3.2.0.0
+ARG S6_OVERLAY_VERSION=3.2.3.0
 ARG DATA_DIR=/data/tedge
 # Match default tedge uid/gid used by Yocto images
 ARG USERID=999
