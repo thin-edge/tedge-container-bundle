@@ -7,7 +7,8 @@ Suite Teardown      Stop Device
 
 *** Test Cases ***
 Cloud Connection is Online
-    Cumulocity.Execute Shell Command    tedge connect c8y --test
+    ${operation}=    Cumulocity.Execute Shell Command    tedge connect c8y --test
+    Operation Should Be SUCCESSFUL    ${operation}
 
 Service status
     Cumulocity.Should Have Services    name=tedge-mapper-c8y    service_type=service    status=up    timeout=90
@@ -15,5 +16,6 @@ Service status
 
 Sends measurements
     ${date_from}=    Get Test Start Time
-    Cumulocity.Execute Shell Command    tedge mqtt pub te/device/main///m/sensor '{"m":23.5}'
+    ${operation}=    Cumulocity.Execute Shell Command    tedge mqtt pub te/device/main///m/sensor '{"m":23.5}'
+    Operation Should Be SUCCESSFUL    ${operation}
     Cumulocity.Device Should Have Measurements    type=sensor    minimum=1    after=${date_from}
