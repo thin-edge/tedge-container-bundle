@@ -103,6 +103,10 @@ COPY files/tedge/fix-permissions.sh /usr/bin/
 # Helper script to set the Cumulocity Basic Auth more easily
 COPY files/tedge/set-c8y-basic-auth.sh /usr/bin/
 
+# certificate renewal service
+COPY files/tedge/cert-renewer/service /etc/s6-overlay/s6-rc.d/cert-renewer
+RUN touch /etc/s6-overlay/s6-rc.d/user/contents.d/cert-renewer
+COPY files/tedge/cert-renewer/renew.sh /usr/bin/
 
 ENV S6_BEHAVIOUR_IF_STAGE2_FAILS=2
 ENV S6_CMD_WAIT_FOR_SERVICES_MAXTIME=30000
@@ -140,6 +144,10 @@ ENV TEDGE_LOGS_PATH="$DATA_DIR/logs"
 # ensure tedge-container-plugin data is stored in a persistent directory
 ENV CONTAINER_DATA_DIR="$DATA_DIR/tedge-container-plugin/data"
 ENV CONTAINER_REGISTRY_CREDENTIALS_PATH="$DATA_DIR/tedge-container-plugin/credentials.toml"
+
+# Certificate renewal service settings
+ENV RENEW_INTERVAL_SEC=3600
+ENV CERT_RENEW_PUBLISH_EVENTS=1
 
 # Persist tedge.toml under /data/tedge/tedge.toml by using
 # a symlink from /etc/tedge/tedge.toml to /data/tedge/tedge.toml
