@@ -1,0 +1,16 @@
+#!/command/with-contenv sh
+set -eu
+
+# Configuration
+: "${RENEW_INTERVAL_SEC:=3600}"     # 1 hour
+
+log() {
+    printf '%s cert-renewer: %s\n' "$(date '+%Y-%m-%dT%H:%M:%S%z')" "$*" >&2
+}
+
+log "Certificate renewal service started"
+
+while true; do
+    /usr/bin/renew.sh
+    sleep "$RENEW_INTERVAL_SEC"
+done
