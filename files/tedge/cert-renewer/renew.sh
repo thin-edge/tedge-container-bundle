@@ -43,11 +43,18 @@ renew_cert() {
 
 uses_cumulocity_ca() {
     NAME="$1"
+
+    if [ "${C8Y_CA:-0}" = "1" ]; then
+        return 0
+    fi
+
     tedge cert show "$NAME" | grep "^Issuer:" | grep -q "CN=t[0-9]*"
 }
 
 for MAPPER in $MAPPERS; do
     if uses_cumulocity_ca "$MAPPER" >/dev/null 2>&1; then
         renew_cert "$MAPPER" ||:
+    else
+        echo "Certificate issuer does not match Cumulocity CA, mapper=$MAPPER" >&2
     fi
 done

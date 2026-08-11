@@ -148,6 +148,7 @@ ENV CONTAINER_REGISTRY_CREDENTIALS_PATH="$DATA_DIR/tedge-container-plugin/creden
 # Certificate renewal service settings
 ENV RENEW_INTERVAL_SEC=3600
 ENV CERT_RENEW_PUBLISH_EVENTS=1
+ENV C8Y_CA=0
 
 # Persist tedge.toml under /data/tedge/tedge.toml by using
 # a symlink from /etc/tedge/tedge.toml to /data/tedge/tedge.toml
