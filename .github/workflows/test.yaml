@@ -1,35 +1,67 @@
 name: Test
 
 on:
-  workflow_dispatch:
-  # Use a manual approval process before PR's are given access to
-  # the secrets which are required to run the integration tests.
-  # The PR code should be manually approved to see if it can be trusted.
-  # When in doubt, do not approve the test run.
-  # Reference: https://dev.to/petrsvihlik/using-environment-protection-rules-to-secure-secrets-when-building-external-forks-with-pullrequesttarget-hci
-  pull_request_target:
+  # In-repo (maintainer) PRs run automatically. Fork PRs lack secret access and
+  # must be triggered by a maintainer commenting /test (see test-slash-command.yaml),
+  # which dispatches the repository_dispatch event below.
+  pull_request:
     branches: [ main ]
+  repository_dispatch:
+    types: [test-command]
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Commit SHA or branch to test"
+        required: false
+        default: ""
   merge_group:
 
 permissions:
   contents: read
 
 jobs:
-  approve:
-    name: Approve
-    environment:
-      # For security reasons, all pull requests need to be approved first before granting access to secrets
-      # So the environment should be set to have a reviewer/s inspect it before approving it
-      name: ${{ github.event_name == 'pull_request_target' && 'Test Pull Request' || 'Test Auto'  }}
+  build:
+    name: Build (${{ matrix.build.image }}@${{ matrix.build.tag }})
+    # Skip fork PRs on the pull_request event (they have no secret access). The
+    # /test slash command path (repository_dispatch) runs them with secrets.
+    if: >-
+      github.event_name != 'pull_request' ||
+      github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        build:
+          - { image: tedge, tag: latest }
+          - { image: tedge-main, tag: latest }
     steps:
-      - name: Wait for approval
-        run: echo "Approved"
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.client_payload.pull_request.head.sha || inputs.ref || github.sha }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - uses: taiki-e/install-action@just
+
+      - name: Build test bundles
+        env:
+          TEDGE_IMAGE: ${{ matrix.build.image }}
+          TEDGE_TAG: ${{ matrix.build.tag }}
+        run: just build-test-bundles
+
+      - name: Upload bundles
+        uses: actions/upload-artifact@v7
+        with:
+          name: bundles-${{ matrix.build.image }}
+          path: tests/*.tar.gz
+          retention-days: 1
 
   test:
     name: Test ${{ matrix.job.name }} (${{ matrix.build.image }}@${{ matrix.build.tag }})
+    needs: build
     runs-on: ubuntu-latest
-    needs: approve
     permissions:
       # Required to publish system test results to the PR
       issues: write
@@ -60,7 +92,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
         with:
-          ref: ${{ github.event_name == 'pull_request_target' && github.event.pull_request.head.sha || '' }}
+          ref: ${{ github.event.client_payload.pull_request.head.sha || inputs.ref || github.sha }}
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
@@ -78,22 +110,24 @@ jobs:
           echo 'C8Y_BASEURL="${{ secrets.C8Y_BASEURL }}"' >> .env
           echo 'C8Y_USER="${{ secrets.C8Y_USER }}"' >> .env
           echo 'C8Y_PASSWORD="${{ secrets.C8Y_PASSWORD }}"' >> .env
-          cat .env
 
       - uses: actions/setup-python@v6
         with:
-          python-version: '3.11'
+          python-version-file: tests/.python-version
           cache: 'pip'
           cache-dependency-path: |
             tests/requirements.txt
 
+      - name: Download test bundles
+        uses: actions/download-artifact@v8
+        with:
+          name: bundles-${{ matrix.build.image }}
+          path: tests
+
       - name: Install dependencies
-        env:
-          TEDGE_IMAGE: ${{ matrix.build.image }}
-          TEDGE_TAG: ${{ matrix.build.tag }}
         run: |
           just venv
-          just build-test
+          just build-test-image
 
       - name: Run tests
         run: just test
@@ -107,8 +141,27 @@ jobs:
 
       - name: Send report to commit
         uses: joonvena/robotframework-reporter-action@v2.5
-        if: always() && github.event_name == 'pull_request_target'
+        if: ${{ always() && (github.event_name == 'pull_request' || github.event_name == 'repository_dispatch') }}
         with:
           gh_access_token: ${{ secrets.GITHUB_TOKEN }}
           report_path: 'output'
-          show_passed_tests: 'true'
+          show_passed_tests: 'false'
+          pull_request_id: ${{ github.event.pull_request.number || github.event.client_payload.pull_request.number }}
+          sha: ${{ github.event.client_payload.pull_request.head.sha || github.sha }}
+
+  tests-pass:
+    name: Tests Pass
+    needs: [build, test]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check all matrix jobs passed
+        run: |
+          if [ "${{ needs.build.result }}" != "success" ]; then
+            echo "Build job failed: ${{ needs.build.result }}"
+            exit 1
+          fi
+          if [ "${{ needs.test.result }}" != "success" ]; then
+            echo "One or more matrix jobs failed: ${{ needs.test.result }}"
+            exit 1
+          fi
