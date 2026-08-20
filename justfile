@@ -101,6 +101,11 @@ build-test-bundles:
     echo "Building tedge-container-bundle images"
     just build "docker,dest=./tests/tedge-container-bundle_99.99.1.tar.gz" 99.99.1
     just build "docker,dest=./tests/tedge-container-bundle_99.99.2.tar.gz" 99.99.2
+    # Built to a separate directory so that it is not pre-loaded into the test device's
+    # container engine. It is uploaded to Cumulocity and installed from there instead
+    mkdir -p ./tests/images
+    just build "docker,dest=./tests/images/tedge-container-bundle_99.99.3.tar" 99.99.3
+    gzip -f ./tests/images/tedge-container-bundle_99.99.3.tar
 
 # Run tests
 test *ARGS='':
