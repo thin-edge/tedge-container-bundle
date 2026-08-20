@@ -10,16 +10,35 @@ on_success = "executing"
 
 [executing]
 action = "proceed"
+on_success = "check_image_source"
+
+[check_image_source]
+# An image url is optional. Without it the image is pulled from a container registry
+script = "sh -c '[ -n \"$1\" ]' -- ${.payload.url}"
+on_exit.0 = "download_image"
+on_exit._ = "install_image"
+
+[download_image]
+action = "download"
+input.url = "${.payload.url}"
+on_success = "install_image"
+on_error = { status = "failed", reason = "Failed to download the container image" }
+
+[install_image]
+script = "sh -c 'sudo -E tedge-container tools image-install --image \"$1\" --file \"$2\"; rc=$?; rm -f \"$2\"; exit $rc' -- ${.payload.image} ${.payload.downloadedPath}"
 on_success = "needs_update"
+on_error = { status = "failed", reason = "Failed to install the container image" }
 
 [needs_update]
-script = "sudo -E tedge-container tools container-clone --image ${.payload.image} --container ${.payload.containerName} --check"
+# Only skip pulling when the image came from an archive, so that a registry based
+# update still picks up a new image published under the same tag
+script = "sh -c 'sudo -E tedge-container tools container-clone ${1:+--no-pull} --check --image \"$2\" --container \"$3\"' -- ${.payload.downloadedPath} ${.payload.image} ${.payload.containerName}"
 on_exit.0 = "update"
 on_exit.2 = "successful"
 on_exit._ = "failed"
 
 [update]
-script = "sudo -E tedge-container tools container-clone --fork --image ${.payload.image} --container ${.payload.containerName} --fork-name ${.payload.containerName}-updater --stop-after 10s"
+script = "sh -c 'sudo -E tedge-container tools container-clone ${1:+--no-pull} --fork --image \"$2\" --container \"$3\" --fork-name \"$3-updater\" --stop-after 10s' -- ${.payload.downloadedPath} ${.payload.image} ${.payload.containerName}"
 on_success = "wait-for-container-stop"
 on_error = "failed"
 
@@ -40,7 +59,9 @@ on_success = "verify"
 on_error = "verify"
 
 [verify]
-script = "sudo -E tedge-container tools container-clone --image ${.payload.image} --container ${.payload.containerName} --check"
+# Only skip pulling when the image came from an archive, so that a registry based
+# update still picks up a new image published under the same tag
+script = "sh -c 'sudo -E tedge-container tools container-clone ${1:+--no-pull} --check --image \"$2\" --container \"$3\"' -- ${.payload.downloadedPath} ${.payload.image} ${.payload.containerName}"
 # Expected 2 which means no update is required (as it should of already happened).
 # If an update is still required, then it generally means something unexpected happened
 on_exit.0 = { status = "failed", reason = "Container was not updated" }

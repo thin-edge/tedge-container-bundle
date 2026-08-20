@@ -48,6 +48,25 @@ Self update using software update operation
     # updater container should be removed (logs are already collected as part of the workflow)
     Cumulocity.Should Have Services    service_type=container    name=tedge-updater    min_count=0    max_count=0
 
+Self update using an image installed from a file
+    # pre-condition: the image is only available as a binary in Cumulocity, so any
+    # attempt to pull it from a container registry would fail
+    Device Should Have Installed Software
+    ...    {"name": "tedge", "version": "ghcr.io/thin-edge/tedge-container-bundle:99.99.1", "softwareType": "container"}
+    ...    timeout=10
+
+    ${url}=    Cumulocity.Create Inventory Binary
+    ...    tedge-container-bundle
+    ...    image
+    ...    file=${CURDIR}/../images/tedge-container-bundle_99.99.3.tar.gz
+
+    ${operation}=    Cumulocity.Install Software
+    ...    {"name": "tedge", "version": "ghcr.io/thin-edge/tedge-container-bundle:99.99.3", "softwareType": "container", "url": "${url}"}
+
+    Cumulocity.Operation Should Be SUCCESSFUL    ${operation}    timeout=240
+    Device Should Have Installed Software
+    ...    {"name": "tedge", "version": "ghcr.io/thin-edge/tedge-container-bundle:99.99.3", "softwareType": "container"}
+
 Rollback when trying to install a non-tedge based image
     # pre-condition
     Device Should Have Installed Software
@@ -81,7 +100,8 @@ Self update using software update operation using Container type
     ...    {"name": "tedge", "version": "ghcr.io/thin-edge/tedge-container-bundle:99.99.1", "softwareType": "container"}
     ...    timeout=10
     Device Should Not Have Installed Software
-    ...    {"name": "app20", "version": "ghcr.io/thin-edge/test-images/nginx:latest", "softwareType": "container"}    timeout=10
+    ...    {"name": "app20", "version": "ghcr.io/thin-edge/test-images/nginx:latest", "softwareType": "container"}
+    ...    timeout=10
 
     ${operation}=    Cumulocity.Install Software
     ...    {"name": "tedge", "version": "ghcr.io/thin-edge/tedge-container-bundle:99.99.2", "softwareType": "container"}

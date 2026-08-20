@@ -13,3 +13,4 @@ output/
 
 # Test artifacts
 tests/*.tar.gz
+tests/images/
