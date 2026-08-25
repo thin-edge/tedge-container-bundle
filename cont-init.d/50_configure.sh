@@ -357,6 +357,14 @@ for MAPPER in $MAPPERS; do
             fi
             if [ "$attempt" -ge "$MAX_CONNECT_ATTEMPTS" ]; then
                 echo "Couldn't connect to $MAPPER but continuing anyway" >&2
+                # Manually create the bridge placeholder file as it is
+                # used by the 'tedge connect c8y --test' command to determine if the
+                # bridge is configured or not.
+                # This mechanism will most likely change in the future, but for now create
+                # the file anyway to ensure that the test command still works until a longer
+                # term fix is available.
+                # See https://github.com/thin-edge/thin-edge.io/issues/4309
+                touch /etc/tedge/mosquitto-conf/$MAPPER-bridge.conf ||:
                 break
             fi
             attempt=$((attempt + 1))
