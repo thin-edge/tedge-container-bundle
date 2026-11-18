@@ -126,6 +126,16 @@ jobs:
             echo "No mosquitto AppArmor profile on this runner; nothing to do"
           fi
 
+      # Podman v4 (netavark with the legacy iptables backend) needs the ip_tables kernel
+      # modules, but the test container can't load them itself. Ubuntu 26.04 runners no
+      # longer load them by default, so load them on the host.
+      - name: Load legacy iptables kernel modules
+        run: |
+          for module in ip_tables iptable_filter iptable_nat ip6_tables ip6table_filter ip6table_nat; do
+            sudo modprobe "$module" || echo "::warning::Could not load kernel module $module"
+          done
+          lsmod | grep -E '^(ip_tables|iptable_|ip6_tables|ip6table_)' || true
+
       - name: Install dependencies
         env:
           TEDGE_IMAGE: ${{ matrix.build.image }}
